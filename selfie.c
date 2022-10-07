@@ -11809,6 +11809,7 @@ void print_synopsis(char* extras) {
 // -----------------------------------------------------------------
 
 uint64_t selfie(uint64_t extras) {
+  printf("%s: This is Michael Lenort's Selfie!\n", selfie_name);
   if (number_of_remaining_arguments() == 0)
     return EXITCODE_NOARGUMENTS;
   else {
