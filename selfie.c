@@ -386,9 +386,15 @@ uint64_t is_character_letter_or_digit_or_underscore();
 uint64_t is_character_not_double_quote_or_new_line_or_eof();
 
 uint64_t identifier_string_match(uint64_t string_index);
+
 uint64_t identifier_or_keyword();
 
 void get_symbol();
+
+
+// Assignment 1 Assembler Parser 
+
+//void get_assembly();
 
 void handle_escape_sequence();
 
@@ -460,7 +466,74 @@ uint64_t SYM_ELLIPSIS     = 28; // ...
 uint64_t SYM_INT      = 29; // int
 uint64_t SYM_CHAR     = 30; // char
 uint64_t SYM_UNSIGNED = 31; // unsigned
-uint64_t SYM_CONST    = 32; // const
+
+// Assignment 1 - Systems 
+uint64_t SYM_ADD      = 32;
+uint64_t SYM_SUB      = 33;
+uint64_t SYM_DIVU      = 34;
+uint64_t SYM_MUL      = 35;
+uint64_t SYM_REMU      = 36;
+uint64_t SYM_SLTU      = 37;
+uint64_t SYM_BEQ      = 38;
+uint64_t SYM_JAL      = 39;
+uint64_t SYM_JALR      = 40;
+uint64_t SYM_ECALL      = 41;
+uint64_t SYM_SD         = 42;
+uint64_t SYM_SP         = 43;
+uint64_t SYM_GP         = 44;
+uint64_t SYM_LUI        = 45;
+
+uint64_t SYM_ZERO    = 46; // const
+uint64_t SYM_LD    = 47; // const
+
+uint64_t SYM_RA   = 48; // const
+uint64_t SYM_TP    = 49; // const
+uint64_t SYM_T0   = 50; // const
+uint64_t SYM_T1   = 51; // const
+uint64_t SYM_T2   = 52; // const
+uint64_t SYM_T3   = 53; // const
+uint64_t SYM_T4   = 54; // const
+uint64_t SYM_T5   = 55; // const
+uint64_t SYM_T6   = 56; // const
+uint64_t SYM_T7   = 57; // const
+uint64_t SYM_T8   = 58; // const
+uint64_t SYM_A0   = 58; // const
+uint64_t SYM_A1   = 59; // const
+uint64_t SYM_A2   = 60; // const
+uint64_t SYM_A3   = 61; // const
+uint64_t SYM_A4   = 62; // const
+uint64_t SYM_A5   = 63; // const
+uint64_t SYM_A6   = 64; // const
+uint64_t SYM_A7   = 65; // const
+uint64_t SYM_A8   = 66; // const
+uint64_t SYM_S0   = 67; // const
+uint64_t SYM_S1   = 68; // const
+uint64_t SYM_S2   = 69; // const
+uint64_t SYM_S3   = 70; // const
+uint64_t SYM_S4   = 71; // const
+uint64_t SYM_S5   = 72; // const
+uint64_t SYM_S6   = 73; // const
+uint64_t SYM_S7   = 74; // const
+uint64_t SYM_S8   = 75; // const
+uint64_t SYM_S9   = 76; // const
+uint64_t SYM_S10   = 77; // const
+uint64_t SYM_S11  = 78; // const
+uint64_t SYM_ADDI  = 79; // const
+
+
+uint64_t SYM_CONST = 80; // const
+
+
+uint64_t is_register();
+uint64_t is_instruction();
+uint64_t get_instruction();
+
+// Assignment 1 
+
+void compile_assembly();
+
+
+
 
 uint64_t* SYMBOLS; // strings representing symbols
 
@@ -534,7 +607,20 @@ void init_scanner () {
   *(SYMBOLS + SYM_CHAR)     = (uint64_t) "char";
   *(SYMBOLS + SYM_UNSIGNED) = (uint64_t) "unsigned";
   *(SYMBOLS + SYM_CONST)    = (uint64_t) "const";
+  *(SYMBOLS + SYM_ADD)    = (uint64_t) "add";
+  *(SYMBOLS + SYM_SUB)    = (uint64_t) "sub";
+  *(SYMBOLS + SYM_DIVU)    = (uint64_t) "div";
+  *(SYMBOLS + SYM_MUL)    = (uint64_t) "mul";
+  *(SYMBOLS + SYM_REMU)    = (uint64_t) "remu";
+  *(SYMBOLS + SYM_SLTU)    = (uint64_t) "sltu";
+  *(SYMBOLS + SYM_BEQ)    = (uint64_t) "beq";
+  *(SYMBOLS + SYM_JAL)    = (uint64_t) "jal";
+  *(SYMBOLS + SYM_JALR)    = (uint64_t) "jalr";
+  *(SYMBOLS + SYM_ECALL)    = (uint64_t) "ecall";
+  *(SYMBOLS + SYM_ZERO)      = (uint64_t) "zero";
 
+
+// Assignment 1 - Systems
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 }
@@ -684,10 +770,15 @@ uint64_t is_mult_or_div_or_rem();
 uint64_t is_factor();
 uint64_t is_literal();
 
+
 uint64_t is_neither_rbrace_nor_eof();
 uint64_t is_possibly_parameter(uint64_t is_already_variadic);
 
 uint64_t is_neither_type_nor_void();
+
+// Assignment 1 - Assembler Parser - Michael Lenort
+
+uint64_t is_not_riscu_assembly();
 uint64_t is_not_statement();
 uint64_t is_not_factor();
 
@@ -752,6 +843,8 @@ uint64_t procedure_call(uint64_t* entry, char* procedure, uint64_t number_of_act
 
 uint64_t compile_call(char* procedure); // returns type
 void     compile_return();
+
+// Assignment 1 
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -1603,6 +1696,8 @@ void set_used_list_head_gc(uint64_t* context, uint64_t* used_list_head);
 void set_free_list_head_gc(uint64_t* context, uint64_t* free_list_head);
 void set_gcs_in_period_gc(uint64_t* context, uint64_t gcs);
 void set_gc_enabled_gc(uint64_t* context);
+
+void get_assembler_symbol();
 
 void gc_init_selfie(uint64_t* context);
 
@@ -3672,6 +3767,9 @@ uint64_t identifier_string_match(uint64_t keyword) {
   return string_compare(identifier, (char*) *(SYMBOLS + keyword));
 }
 
+uint64_t identifier_string_match_register(uint64_t keyword) {
+  return string_compare(identifier, (char*) *(REGISTERS + keyword));
+}
 uint64_t identifier_or_keyword() {
   if (identifier_string_match(SYM_UINT64))
     return SYM_UINT64;
@@ -3700,6 +3798,117 @@ uint64_t identifier_or_keyword() {
   else
     return SYM_IDENTIFIER;
 }
+
+
+void get_assembler_symbol(){
+  uint64_t i;
+  uint64_t integer_is_signed;
+  symbol = SYM_EOF;
+
+
+
+
+      printf("called me!");
+     
+
+
+ 
+  // obviously, check if there are chars left
+  if (find_next_character() != CHAR_EOF) {
+
+          printf("YES33333");
+
+    // Assignment 1
+    // this part is taken 1:1 from the get_symbol scanner
+    // to identify a letter char
+	 // start state of finite state machine
+      // for recognizing C* symbols is here
+     
+		get_symbol();
+    // // Assignment 1 
+    // // set the symbol 
+		if (is_instruction()) {
+
+      printf("YES33");
+			//symbol = get_instruction();
+
+      get_symbol();
+      
+      if(symbol == SYM_COMMA){
+
+        get_symbol();
+        if(is_register()){
+        
+        get_symbol();
+
+        if(symbol == SYM_COMMA){
+
+        get_symbol();
+
+        if(is_register()){
+
+          get_symbol();
+        }else {
+        syntax_error_expected_symbol(SYM_A1);
+      }
+      } else {
+        syntax_error_expected_symbol(SYM_A1);
+      }
+        }
+      
+
+      }
+		
+	   if (is_character_letter_or_digit_or_underscore()) {
+		  
+			if (character == CHAR_DASH) {
+				integer_is_signed = 1;
+				get_character();
+			}
+			
+			// accommodate integer and null for termination
+			integer = string_alloc(MAX_INTEGER_LENGTH);
+
+			i = 0;
+
+			while (is_character_letter_or_digit_or_underscore()) {
+			  if (i >= MAX_INTEGER_LENGTH) {
+				if (integer_is_signed)
+				  syntax_error_message("signed integer out of bound");
+				else
+				  syntax_error_message("integer out of bound");
+
+				exit(EXITCODE_SCANNERERROR);
+			  }
+			  store_character(integer, i, character);
+
+			  i = i + 1;
+
+			  get_character();
+			}
+
+			store_character(integer, i, 0); // null-terminated string
+
+			literal = atoi(integer);
+			
+			if (integer_is_signed)
+			  if (literal > INT64_MIN) {
+				  syntax_error_message("signed integer out of bound");
+
+				  exit(EXITCODE_SCANNERERROR);
+				}
+			
+			symbol = SYM_INTEGER;
+    }
+    
+	   } else {
+
+      syntax_error_expected_symbol(SYM_ADD);
+     } 
+  }
+}
+
+
 
 void get_symbol() {
   uint64_t i;
@@ -4289,6 +4498,15 @@ uint64_t is_neither_type_nor_void() {
     return 1;
 }
 
+// Assginment 1 - Assembler Parser - Michael Lenort 
+uint64_t is_not_riscu_assembly() {
+  if (is_instruction())
+    return 1;
+  else
+    return 0;
+}
+
+
 uint64_t is_not_statement() {
   if (symbol == SYM_ASTERISK)
     return 0;
@@ -4486,6 +4704,136 @@ uint64_t* compile_variable(char* variable, uint64_t type, uint64_t offset) {
   }
 
   return entry;
+}
+
+
+
+// Assignment 1 - Assembler Parser - Michael Lenort
+
+// Personal Notes: This procedure is called by the selfie_compile_assembly function
+// that is invoked by the -a flag. It uses the same top down approach as the scanner for cstar,
+// altough keywords are identifid through the symbol table. 
+// The idea is
+
+
+// ##################### // 
+// RISCU - Instruction Set // 
+// add 
+// sub
+// divu
+// mult
+
+// ######################
+// Selfie Registers  // 
+
+void compile_assembly(){
+
+  //get_instruction();
+
+  printf("called!");
+
+
+  // The approach is to identify.
+
+  uint64_t curr_reg;
+
+
+  
+
+  uint64_t r1;
+  uint64_t r2;
+  uint64_t value;
+  //char* variable_or_procedure;
+  //uint64_t* entry;
+
+  if (symbol != SYM_EOF) {
+
+    printf("%lu", symbol);
+
+    if(symbol == SYM_IDENTIFIER){
+
+      printf(" ");
+
+
+      // we parse the different identifiers through to see if it matches in RISC-U Implementation. 
+
+      if(identifier_string_match(SYM_ADD)){
+        printf("matches add \n");
+
+          get_symbol();
+
+          
+
+          // re-implemnted the string match method but for registers to identify them. 
+         if(is_register()){
+
+          r1 = is_register();
+            printf("first register \n");
+
+          get_symbol();
+
+          if(symbol == SYM_COMMA){
+            printf("first comma detected \n");
+
+            if(is_register()){
+              r2 = is_register();
+
+                printf("second register detected \n");
+
+
+                get_symbol(); 
+                get_symbol();
+
+
+                if(symbol == SYM_COMMA){
+                  get_symbol();                  get_symbol();
+
+
+                  printf("second comma detected \n");
+
+
+                  if(identifier_string_match(SYM_ZERO)){
+
+
+                    printf("zero value detected");
+                  }
+
+                  
+
+
+                }
+            }
+
+           
+
+          }
+
+
+
+
+
+         }
+      }
+
+     
+
+
+     
+      
+
+
+    }
+
+
+
+
+    
+
+   
+  }
+
+  
+  
 }
 
 uint64_t compile_type() {
@@ -6142,6 +6490,156 @@ void emit_bootstrapping() {
 
 uint64_t open_read_only(char* name) {
   return sign_extend(open(name, O_RDONLY, 0), SYSCALL_BITWIDTH);
+}
+
+void selfie_compile_assembly();
+
+void selfie_compile_assembly() {
+  uint64_t link;
+  uint64_t number_of_source_files;
+  uint64_t fetch_dss_code_location;
+
+  fetch_dss_code_location = 0;
+
+  // link until next console option
+  link = 1;
+
+  number_of_source_files = 0;
+
+  source_name = "library";
+
+  binary_name = source_name;
+
+  reset_binary();
+
+  // allocate zeroed memory for storing binary
+  code_binary = zmalloc(MAX_CODE_SIZE);
+  data_binary = zmalloc(MAX_DATA_SIZE);
+
+  // allocate zeroed memory for storing source code line numbers
+  code_line_number = zmalloc(MAX_CODE_SIZE / INSTRUCTIONSIZE * SIZEOFUINT64);
+  data_line_number = zmalloc(MAX_DATA_SIZE / WORDSIZE * SIZEOFUINT64);
+
+  reset_symbol_tables();
+  reset_instruction_counters();
+
+  emit_program_entry();
+
+  // emit system call wrappers
+  // exit code must be first
+  emit_exit();
+  emit_read();
+  emit_write();
+  emit_open();
+
+  emit_malloc();
+
+  emit_switch();
+
+  if (GC_ON) {
+    emit_fetch_stack_pointer();
+    emit_fetch_global_pointer();
+
+    // save code location of eventual fetch_data_segment_size implementation
+    fetch_dss_code_location = code_size;
+
+    emit_fetch_data_segment_size_interface();
+  }
+
+  // declare macros in library symbol table to override entries in global symbol table
+  create_symbol_table_entry(LIBRARY_TABLE, "var_start", 0, MACRO, VOID_T, 1, 0);
+  create_symbol_table_entry(LIBRARY_TABLE, "var_arg", 0, MACRO, UINT64_T, 1, 0);
+  create_symbol_table_entry(LIBRARY_TABLE, "var_end", 0, MACRO, VOID_T, 1, 0);
+
+  // declare main procedure in global symbol table
+  // use main_name string to obtain unique hash
+  create_symbol_table_entry(GLOBAL_TABLE, main_name, 0, PROCEDURE, UINT64_T, 0, 0);
+
+  while (link) {
+    if (number_of_remaining_arguments() == 0)
+      link = 0;
+    else if (load_character(peek_argument(0), 0) == '-')
+      link = 0;
+    else {
+      source_name = get_argument();
+
+      number_of_source_files = number_of_source_files + 1;
+
+      printf("%s: selfie compiling %s to %lu-bit RISC-U with %lu-bit starc\n", selfie_name,
+        source_name, WORDSIZEINBITS, SIZEOFUINT64INBITS);
+
+      // assert: source_name is mapped and not longer than MAX_FILENAME_LENGTH
+
+      source_fd = open_read_only(source_name);
+
+      if (signed_less_than(source_fd, 0)) {
+        printf("%s: could not open input file %s\n", selfie_name, source_name);
+
+        exit(EXITCODE_IOERROR);
+      }
+
+      reset_scanner();
+      reset_parser();
+
+      //compile_cstar();
+
+      compile_assembly();
+
+      printf("%s: %lu characters read in %lu lines and %lu comments\n", selfie_name,
+        number_of_read_characters,
+        line_number,
+        number_of_comments);
+
+      printf("%s: with %lu(%lu.%.2lu%%) characters in %lu actual symbols\n", selfie_name,
+        number_of_read_characters - number_of_ignored_characters,
+        percentage_format_integral_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
+        percentage_format_fractional_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
+        number_of_scanned_symbols);
+
+      printf("%s: %lu global variables, %lu procedures, %lu string literals\n", selfie_name,
+        number_of_global_variables,
+        number_of_procedures,
+        number_of_strings);
+
+      printf("%s: %lu calls, %lu assignments, %lu while, %lu if, %lu return\n", selfie_name,
+        number_of_calls,
+        number_of_assignments,
+        number_of_while,
+        number_of_if,
+        number_of_return);
+
+      if (number_of_syntax_errors != 0) {
+        printf("%s: encountered %lu syntax errors while compiling %s - omitting output\n",
+          selfie_name,
+          number_of_syntax_errors,
+          source_name);
+        exit(EXITCODE_SYNTAXERROR);
+      }
+    }
+  }
+
+  if (number_of_source_files == 0)
+    printf("%s: nothing to compile, only library generated\n", selfie_name);
+
+  emit_bootstrapping();
+
+  if (GC_ON)
+    emit_fetch_data_segment_size_implementation(fetch_dss_code_location);
+
+  emit_data_segment();
+
+  ELF_header = encode_elf_header();
+
+  printf("%s: symbol table search time was %lu iterations on average and %lu in total\n", selfie_name,
+    total_search_time / number_of_searches,
+    total_search_time);
+
+  printf("%s: %lu bytes generated with %lu instructions and %lu bytes of data\n", selfie_name,
+    code_size + data_size,
+    code_size / INSTRUCTIONSIZE,
+    data_size);
+
+  print_instruction_counters();
 }
 
 void selfie_compile() {
@@ -9932,6 +10430,167 @@ uint64_t print_data_context() {
     + dprintf(output_fd, ": ");
 }
 
+
+uint64_t get_instruction() {
+  if (identifier_string_match(SYM_LUI))
+    return SYM_LUI;
+  else if (identifier_string_match(SYM_ADDI))
+    return SYM_ADDI;
+  else if (identifier_string_match(SYM_LD))
+    return SYM_LD;
+  else if (identifier_string_match(SYM_SD))
+    return SYM_SD;
+  else if (identifier_string_match(SYM_ADD))
+    return SYM_ADD;
+  else if (identifier_string_match(SYM_SUB))
+    return SYM_SUB;
+  else if (identifier_string_match(SYM_MUL))
+    return SYM_MUL;
+  else if (identifier_string_match(SYM_DIVU))
+    return SYM_DIVU;
+  else if (identifier_string_match(SYM_REMU))
+    return SYM_REMU;
+  else if (identifier_string_match(SYM_SLTU))
+    return SYM_SLTU;
+  else if (identifier_string_match(SYM_BEQ))
+    return SYM_BEQ;
+  else if (identifier_string_match(SYM_JAL))
+    return SYM_JAL;
+  else if (identifier_string_match(SYM_JALR))
+    return SYM_JALR;
+  else if (identifier_string_match(SYM_ECALL))
+    return SYM_ECALL;
+  else
+	exit(EXITCODE_SCANNERERROR);
+}
+
+uint64_t get_register() {
+	if (identifier_string_match(REG_ZR))
+		return REG_ZR;
+	else if (identifier_string_match(SYM_RA))
+		return SYM_RA;
+	else if (identifier_string_match(SYM_SP))
+		return SYM_SP;
+	else if (identifier_string_match(SYM_GP))
+		return SYM_GP;
+	else if (identifier_string_match(SYM_TP))
+		return SYM_TP;
+	else if (identifier_string_match(SYM_T0))
+		return SYM_T0;
+	else if (identifier_string_match(SYM_T1))
+		return SYM_T1;
+	else if (identifier_string_match(SYM_T2))
+		return SYM_T2;
+	else if (identifier_string_match(SYM_S0))
+		return SYM_S0;
+	else if (identifier_string_match(SYM_S1))
+		return SYM_S1;
+	else if (identifier_string_match(SYM_A0))
+		return SYM_A0;
+	else if (identifier_string_match(SYM_A1))
+		return SYM_A1;
+	else if (identifier_string_match(SYM_A2))
+		return SYM_A2;
+	else if (identifier_string_match(SYM_A3))
+		return SYM_A3;
+	else if (identifier_string_match(SYM_A4))
+		return SYM_A4;
+	else if (identifier_string_match(SYM_A5))
+		return SYM_A5;
+	else if (identifier_string_match(SYM_A6))
+		return SYM_A6;
+	else if (identifier_string_match(SYM_A7))
+		return SYM_A7;
+	else if (identifier_string_match(SYM_S2))
+		return SYM_S2;
+	else if (identifier_string_match(SYM_S3))
+		return SYM_S3;
+	else if (identifier_string_match(SYM_S4))
+		return SYM_S4;
+	else if (identifier_string_match(SYM_S5))
+		return SYM_S5;
+	else if (identifier_string_match(SYM_S6))
+		return SYM_S6;
+	else if (identifier_string_match(SYM_S7))
+		return SYM_S7;
+	else if (identifier_string_match(SYM_S8))
+		return SYM_S8;
+	else if (identifier_string_match(SYM_S9))
+		return SYM_S9;
+	else if (identifier_string_match(SYM_S10))
+		return SYM_S10;
+	else if (identifier_string_match(SYM_S11))
+		return SYM_S11;
+	else if (identifier_string_match(SYM_T3))
+		return SYM_T3;
+	else if (identifier_string_match(SYM_T4))
+		return SYM_T4;
+	else if (identifier_string_match(SYM_T5))
+		return SYM_T5;
+	else if (identifier_string_match(SYM_T6))
+		return SYM_T6;
+	else 
+		exit(EXITCODE_SCANNERERROR);
+}
+
+uint64_t is_instruction() {
+  if (identifier_string_match(SYM_LUI))
+	return 1;
+  else if (identifier_string_match(SYM_ADDI))
+    return 1;
+  else if (identifier_string_match(SYM_LD))
+    return 1;
+  else if (identifier_string_match(SYM_SD))
+    return 1;
+  else if (identifier_string_match(SYM_ADD))
+    return 1;
+  else if (identifier_string_match(SYM_SUB))
+    return 1;
+  else if (identifier_string_match(SYM_MUL))
+    return 1;
+  else if (identifier_string_match(SYM_DIVU))
+    return 1;
+  else if (identifier_string_match(SYM_REMU))
+    return 1;
+  else if (identifier_string_match(SYM_SLTU))
+    return 1;
+  else if (identifier_string_match(SYM_BEQ))
+    return 1;
+  else if (identifier_string_match(SYM_JAL))
+    return 1;
+  else if (identifier_string_match(SYM_JALR))
+    return 1;
+  else if (identifier_string_match(SYM_ECALL))
+    return 1;
+  else
+    return 0;
+}
+
+uint64_t is_register() {
+	if(identifier_string_match_register(REG_T0))
+    return REG_T0;
+  else if(identifier_string_match_register(REG_T1))
+    return REG_T1;
+  else if(identifier_string_match_register(REG_A0))
+    return REG_A0;
+  else if(identifier_string_match_register(REG_A1))
+    return REG_A1;
+  else if(identifier_string_match_register(REG_A2))
+    return REG_A2;
+  else if(identifier_string_match_register(REG_A3))
+    return REG_A3;
+  else if(identifier_string_match_register(REG_A4))
+    return REG_A4;
+  else if(identifier_string_match_register(REG_A5))
+    return REG_A5;
+  else if(identifier_string_match_register(REG_A6))
+    return REG_A6;
+
+  else
+    return 0;
+}
+
+
 uint64_t print_data() {
   uint64_t w;
 
@@ -11801,7 +12460,7 @@ uint64_t no_or_bad_or_more_arguments(uint64_t exit_code) {
 }
 
 void print_synopsis(char* extras) {
-  printf("synopsis: %s { -c { source } | -o binary | ( -s | -S ) assembly | -l binary }%s\n", selfie_name, extras);
+  printf("synopsis: %s { -c { source } | -o binary | -a Assembly | ( -s | -S ) assembly | -l binary }%s\n", selfie_name, extras);
 }
 
 // -----------------------------------------------------------------
@@ -11840,6 +12499,8 @@ uint64_t selfie(uint64_t extras) {
         return EXITCODE_BADARGUMENTS;
       else if (string_compare(argument, "-o"))
         selfie_output(get_argument());
+      else if (string_compare(argument, "-a"))
+        selfie_compile_assembly();
       else if (string_compare(argument, "-s"))
         selfie_disassemble(0);
       else if (string_compare(argument, "-S"))
