@@ -426,7 +426,6 @@ char CHAR_LT           = '<';
 char CHAR_GT           = '>';
 char CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 char CHAR_DOT          = '.';
-char CHAR_EIGHT          = '8';
 char CHAR_B          = 'b';
 
 
@@ -4151,7 +4150,7 @@ void get_symbol() {
       
        else if (character == CHAR_DOT) {
         get_character();
-         if(character == CHAR_EIGHT){
+         if(character == '8'){
           get_character();
 
           if(character == 'b'){
@@ -4167,17 +4166,18 @@ void get_symbol() {
 // we are dealing with SYM_ELLIPSIS "..." or with 
 // SYM_8BYTE ".8byte", which also starts with a dot 
 // character. 
-         if (character == CHAR_DOT) {
+         else if (character == CHAR_DOT) {
           get_character();
 
-          if (character == CHAR_DOT)
+          if (character == CHAR_DOT){
             get_character();
+        symbol = SYM_ELLIPSIS;
+          }
           else
             syntax_error_expected_character(CHAR_DOT);
         } else
           syntax_error_expected_character(CHAR_DOT);
 
-        symbol = SYM_ELLIPSIS;
       } else {
         print_line_number("syntax error", line_number);
         printf("found unknown character ");
@@ -4793,6 +4793,9 @@ void compile_assembly(){
           printf("got 8byte");
           return;
           }
+
+       
+
           
         
     
@@ -4828,6 +4831,11 @@ void compile_assembly(){
     
     // ALU / L | S Instructions Cases
     else if (is_instruction()){
+
+       
+
+         
+        
         if(identifier_string_match(SYM_JAL)){
 
           printf("got jal instruction");
@@ -5192,12 +5200,18 @@ void compile_assembly(){
             }
           }
         }
+
+
+        if(identifier_string_match(SYM_ADDI)){
+        
+        }
       get_symbol();
       if(is_register()){
 
         if(identifier_string_match_register(REG_ZR)){
 
           printf("is zero register");
+          return;
         }
 
 
@@ -5233,7 +5247,10 @@ void compile_assembly(){
                  else if(is_literal()) {  
                   printf("is literal");
                   get_symbol();
-                
+                 
+              } else {
+                syntax_error_expected_symbol(SYM_INTEGER);
+                return;
               }
               
             }
@@ -5244,6 +5261,10 @@ void compile_assembly(){
 
       printf("normal instruction detected");
 
+    } else {
+
+      syntax_error_expected_symbol(SYM_IDENTIFIER);
+      return;
     }
 
 
@@ -7267,7 +7288,7 @@ void selfie_compile_assembly() {
 
       //compile_cstar();
 
-      //compile_assembly();
+      compile_assembly();
 
       printf("%s: %lu characters read in %lu lines and %lu comments\n", selfie_name,
         number_of_read_characters,
