@@ -4147,17 +4147,19 @@ void get_symbol() {
           symbol = SYM_GEQ;
         } else
           symbol = SYM_GT;
-      } else if (character == CHAR_DOT) {
-        get_character();
-
-        if(character == CHAR_EIGHT){
-
-          symbol = SYM_8BYTE;
-        }
-      }
+      } 
       
        else if (character == CHAR_DOT) {
         get_character();
+         if(character == CHAR_EIGHT){
+          get_character();
+
+          if(character == 'b'){
+            get_character();
+            symbol = SYM_8BYTE;
+
+          }
+        }
        
 // Assignment 1 - Assembler Parser - Michael Lenort
 // since for SYM_ELLIPSIS "..." is already delcared
