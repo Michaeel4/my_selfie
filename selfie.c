@@ -533,6 +533,9 @@ uint64_t is_register();
 uint64_t is_instruction();
 uint64_t get_instruction();
 
+
+uint64_t is_addi_instruction();
+
 // Assignment 1 
 
 void compile_assembly();
@@ -4756,6 +4759,7 @@ uint64_t is_lui_instruction(){
 
 
 
+
 // Assignment 1 - Assembler Parser - Michael Lenort
 
 // Personal Notes: This procedure is called by the selfie_compile_assembly function
@@ -4780,7 +4784,7 @@ void compile_assembly(){
 
   // Assignment 1 - Assembler Parser - Michael Lenort
   // these are needed for the second assignment. 
-  //uint64_t instruction;
+  uint64_t instruction;
   //uint64_t r1;
   //uint64_t r2;
   //uint64_t value;
@@ -4796,8 +4800,7 @@ void compile_assembly(){
 
        
 
-          
-        
+    
     
     printf("%lu \n", symbol);
 
@@ -4832,9 +4835,83 @@ void compile_assembly(){
     // ALU / L | S Instructions Cases
     else if (is_instruction()){
 
-       
+      if(is_addi_instruction()){
+      printf("is addi instruction");
 
-         
+    }
+
+       
+        instruction = is_instruction();
+
+        
+        //  if(identifier_string_match(SYM_ADDI)){
+
+        //   printf("is addi instruction");
+
+        //   get_symbol();
+
+
+        //   if(is_register()){
+
+        //     printf("addi register detected");
+
+        //     get_symbol();
+
+
+        //     if(symbol == SYM_COMMA){
+
+        //       get_symbol();
+
+        //       printf("is addi comma");
+
+
+        //       if(is_register()){
+
+
+        //         printf("is addi second register");
+
+        //         get_symbol();
+
+
+        //         if(symbol == SYM_COMMA){
+
+        //           get_symbol();
+
+        //           printf("is comma addi");
+
+        //            if(symbol == SYM_MINUS){
+        //         get_symbol();
+        //        get_symbol();
+        //         printf("%lu",symbol);                
+        //         printf("got negative");
+        //       }
+        //       else if(identifier_string_match(SYM_ZERO)){
+        //         printf(" value detected");
+        //         get_symbol();
+        //       } 
+
+        //           else if(is_literal()){
+        //             while(is_literal()){
+        //               get_symbol();
+        //             } 
+        //           } else {
+        //             syntax_error_expected_symbol(SYM_INTEGER);
+        //             return;
+        //           }
+        //         } else {
+
+        //           syntax_error_expected_symbol(SYM_COMMA);
+        //           return;
+        //         }
+        //       }
+        //     }
+        //   }
+
+        //   return;
+        //  }
+        
+
+          
         
         if(identifier_string_match(SYM_JAL)){
 
@@ -5016,8 +5093,6 @@ void compile_assembly(){
             }
           }
         }
-
-
         
         if(identifier_string_match(SYM_SD)){
 
@@ -5193,23 +5268,17 @@ void compile_assembly(){
                       get_symbol();
 
                     }
-                  }
-                  
+                  } 
                 }
-
             }
           }
         }
 
 
-        if(identifier_string_match(SYM_ADDI)){
-        
-        }
+      
       get_symbol();
       if(is_register()){
-
         if(identifier_string_match_register(REG_ZR)){
-
           printf("is zero register");
           return;
         }
@@ -5218,7 +5287,11 @@ void compile_assembly(){
         get_symbol();
         printf(" first register detected");
 
+        if(instruction == 79){
 
+          printf("is add i");
+          return;
+        }
         if(symbol == SYM_COMMA){
           get_symbol();
           printf(" first comma detected");
@@ -5232,8 +5305,7 @@ void compile_assembly(){
 
               if(symbol == SYM_MINUS){
                 get_symbol();
-                                get_symbol();
-
+               get_symbol();
                 printf("%lu",symbol);                
                 printf("got negative");
               }
@@ -5244,16 +5316,21 @@ void compile_assembly(){
                 printf("is register");
                 get_symbol();
               }
-                 else if(is_literal()) {  
+              else if(is_literal()) {  
                   printf("is literal");
-                  get_symbol();
+                  while(is_literal())
+                    get_symbol();
                  
               } else {
                 syntax_error_expected_symbol(SYM_INTEGER);
                 return;
               }
               
+            } else {
+
+              syntax_error_expected_symbol(SYM_COMMA);
             }
+
           }
         }
       }
@@ -11251,11 +11328,18 @@ uint64_t is_ecall(){
     return 0;
 }
 
+uint64_t is_addi_instruction(){
+  if(identifier_string_match(SYM_ADDI))
+    return 1;
+  else
+    return 0;
+}
+
 // Assignment 1 - Assembler Parser - Michael Lenort
 // Simple boolean function to determine whetever the symbol is definied in the MNEMONICS or not. 
 
 uint64_t is_instruction() {
-  if (identifier_string_match(SYM_ADDI))
+  if(identifier_string_match(SYM_ADDI))
     return 1;
   else if (identifier_string_match(SYM_LD))
     return 1;
