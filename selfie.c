@@ -524,9 +524,10 @@ uint64_t SYM_S11  = 78; // const
 uint64_t SYM_ADDI  = 79; // const
 uint64_t SYM_LW    = 80; // const
 uint64_t SYM_8BYTE = 81;
+uint64_t SYM_NOP = 82;
 
 
-uint64_t SYM_CONST = 82; // const
+uint64_t SYM_CONST = 83; // const
 
 
 uint64_t is_register();
@@ -633,6 +634,7 @@ void init_scanner () {
   *(SYMBOLS + SYM_GP)      = (uint64_t) "gp";
   *(SYMBOLS + SYM_SD)      = (uint64_t) "sd";
   *(SYMBOLS + SYM_8BYTE)      = (uint64_t) ".8byte";
+  *(SYMBOLS + SYM_NOP)      = (uint64_t) "nop";
 
 
 
@@ -4836,12 +4838,15 @@ void compile_assembly(){
     else if (is_instruction()){
 
       if(is_addi_instruction()){
-      printf("is addi instruction");
+        printf("instruction 70 detected");
+      instruction = 79;
 
-    }
+      }else {
 
+      instruction = is_instruction();
+      }
        
-        instruction = is_instruction();
+    
 
         
         //  if(identifier_string_match(SYM_ADDI)){
@@ -5278,25 +5283,23 @@ void compile_assembly(){
       
       get_symbol();
       if(is_register()){
-        if(identifier_string_match_register(REG_ZR)){
-          printf("is zero register");
-          return;
-        }
+        // if(identifier_string_match_register(REG_ZR)){
+        //   printf("is zero register");
+        //   get_symbol();
+        // }
 
 
         get_symbol();
         printf(" first register detected");
 
-        if(instruction == 79){
-
-          printf("is add i");
-          return;
-        }
+       
         if(symbol == SYM_COMMA){
           get_symbol();
           printf(" first comma detected");
 
           if(is_register()){
+
+            
             get_symbol();
             printf("second register detected");
             if(symbol == SYM_COMMA){
@@ -5312,19 +5315,24 @@ void compile_assembly(){
               else if(identifier_string_match(SYM_ZERO)){
                 printf(" value detected");
                 get_symbol();
-              } else if(is_register()){
+
+              } else if(is_literal()) {  
+                  printf("is literal");
+                  while(is_literal())
+                    get_symbol();                                                                              
+              } 
+              else if(is_register()){
+                // if addi reject as we need a literal.
+                if(instruction == 79){
+                  printf("instruction addi detected");
+                  syntax_error_expected_symbol(SYM_INTEGER);
+                  return;
+                }
+
                 printf("is register");
                 get_symbol();
               }
-              else if(is_literal()) {  
-                  printf("is literal");
-                  while(is_literal())
-                    get_symbol();
-                 
-              } else {
-                syntax_error_expected_symbol(SYM_INTEGER);
-                return;
-              }
+              
               
             } else {
 
@@ -11341,6 +11349,8 @@ uint64_t is_addi_instruction(){
 uint64_t is_instruction() {
   if(identifier_string_match(SYM_ADDI))
     return 1;
+  else if(identifier_string_match(SYM_NOP))
+    return 1;
   else if (identifier_string_match(SYM_LD))
     return 1;
   else if (identifier_string_match(SYM_LW))
@@ -11394,6 +11404,8 @@ uint64_t is_register() {
     return REG_A6;
   else if(identifier_string_match_register(REG_A7))
     return REG_A7;
+  else if(identifier_string_match_register(REG_S1))
+    return REG_S1;
   else if(identifier_string_match_register(REG_S2))
     return REG_S2;
   else if(identifier_string_match_register(REG_S3))
