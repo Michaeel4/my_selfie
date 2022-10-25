@@ -166,6 +166,8 @@ uint64_t ratio_format_fractional_2(uint64_t a, uint64_t b);
 uint64_t percentage_format_integral_2(uint64_t a, uint64_t b);
 uint64_t percentage_format_fractional_2(uint64_t a, uint64_t b);
 
+uint64_t write_to_printf_console(uint64_t fd, uint64_t* buffer, uint64_t bytes_to_write);
+
 void put_character(char c);
 
 void print(char* s);
@@ -3046,9 +3048,32 @@ uint64_t percentage_format_fractional_2(uint64_t a, uint64_t b) {
     return 0;
 }
 
-void put_character(char c) {
-  uint64_t written_bytes;
+uint64_t write_to_printf_console(uint64_t fd, uint64_t* buffer, uint64_t bytes_to_write) {
+  uint64_t bytes_written;
 
+  if (fd == 1) {
+    // writing to console
+    if (OS != SELFIE) {
+      // on bootlevel zero use printf to write to console
+      // keeping output synchronized with other printf output
+      bytes_written = 0;
+
+      while (bytes_written < bytes_to_write) {
+        if (printf("%c", load_character((char*) buffer, bytes_written)) != 1)
+          // output failed
+          return bytes_written;
+
+        bytes_written = bytes_written + 1;
+      }
+
+      return bytes_written;
+    }
+  }
+
+  return write(fd, buffer, bytes_to_write);
+}
+
+void put_character(char c) {
   if (output_buffer) {
     // buffering character instead of outputting
     store_character(output_buffer, output_cursor, c);
@@ -3059,25 +3084,11 @@ void put_character(char c) {
 
     // assert: character_buffer is mapped
 
-    if (output_fd == 1) {
-      if (OS != SELFIE)
-        // on bootlevel zero use printf to print on console
-        // to keep output synchronized with other printf output
-        written_bytes = printf("%c", c);
-      else
-        // on non-zero bootlevel use write to print on console
-        // to avoid infinite loop back to printf
-        written_bytes = write(output_fd, (uint64_t*) character_buffer, 1);
-    } else
-      // try to write 1 character from character_buffer
-      // into file with output_fd file descriptor
-      written_bytes = write(output_fd, (uint64_t*) character_buffer, 1);
-
-    if (written_bytes != 1) {
+    if (write_to_printf_console(output_fd, (uint64_t*) character_buffer, 1) != 1) {
       // output failed
       if (output_fd != 1) {
         // failed output was not to console which has file descriptor 1
-        // to report the error we may thus still write to the console
+        // to report the error we may thus still print to the console
         output_fd = 1;
 
         printf("%s: could not write character into output file %s\n", selfie_name, output_name);
@@ -5028,7 +5039,6 @@ uint64_t compile_term() {
 }
 
 uint64_t compile_factor() {
-  uint64_t has_cast;
   uint64_t cast;
   uint64_t type;
   uint64_t negative;
@@ -5045,14 +5055,14 @@ uint64_t compile_factor() {
     else
       get_symbol();
   }
+
   // optional: cast
+  cast = 0;
   if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
 
     if (is_type()) {
       // cast: "(" "uint64_t" [ "*" ] ")"
-      has_cast = 1;
-
       cast = compile_type();
 
       get_expected_symbol(SYM_RPARENTHESIS);
@@ -5066,8 +5076,7 @@ uint64_t compile_factor() {
 
       return type;
     }
-  } else
-    has_cast = 0;
+  }
   // optional: "-"
   if (symbol == SYM_MINUS) {
     negative = 1;
@@ -5147,7 +5156,7 @@ uint64_t compile_factor() {
 
   // assert: allocated_temporaries == n + 1
 
-  if (has_cast)
+  if (cast != 0)
     // cast is grammar attribute
     return cast;
   else
@@ -7603,7 +7612,7 @@ void implement_write(uint64_t* context) {
         if (is_virtual_address_mapped(get_pt(context), vbuffer)) {
           buffer = tlb(get_pt(context), vbuffer);
 
-          actually_written = sign_extend(write(fd, buffer, bytes_to_write), SYSCALL_BITWIDTH);
+          actually_written = sign_extend(write_to_printf_console(fd, buffer, bytes_to_write), SYSCALL_BITWIDTH);
 
           if (actually_written == bytes_to_write) {
             written_total = written_total + actually_written;
