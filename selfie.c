@@ -4798,36 +4798,42 @@ void compile_assembly(){
   //get_instruction();
 
   // Assignment 1 - Assembler Parser - Michael Lenort
-  // these are needed for the second assignment. 
+  // RISCU Assembly Parser. Identifies all possible cases and parses them down
+   
   uint64_t instruction;
   //uint64_t r1;
   //uint64_t r2;
   //uint64_t value;
 
+  // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
 
-        // .8byte case writing to memory
-        if(symbol == 81){
-          get_symbol();
-          printf("got 8byte");
-          return;
-          }
+  // .8byte case writing to memory
+  // Symbol 81 => SYM_8BYTE
+  // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
+  if(symbol == 81){
+    get_symbol();
+    printf("got 8byte");
+    return;
+  }
     printf("%lu \n", symbol);
 
     // LUI case 
+    // Load upper immediate - we must identify LUI cases, because LUI must have an immediate value
+    // as the last argument unlike other instructions, which allow the access to registers as well.
     if(is_lui_instruction()){
       get_symbol();
-      printf("is lui ");
+      //printf("is lui ");
 
       if(is_register()){
         get_symbol();
-        printf("is register ");
+        //printf("is register ");
 
         if(symbol == SYM_COMMA){
           get_symbol();
           get_symbol();
           get_symbol();
-          printf("successfully got lui instruction, restarting... ");
+          //printf("successfully got lui instruction, restarting... ");
         } else {
           syntax_error_expected_symbol(SYM_COMMA);
         }
@@ -4835,26 +4841,26 @@ void compile_assembly(){
       } else {
         syntax_error_expected_symbol(SYM_ADD);
       }
-    } else if(is_ecall()){
+    } else if(is_ecall()){ // Used to identify ecall instruction, as it doesn't take any kind of further arguments.
 
       get_symbol();
 
-      printf("ecall detected");
+      //printf("ecall detected");
     } 
     
     // ALU / L | S Instructions Cases
     else if (is_instruction()){
-
+      
+      // set instruction to 79 => SYM_ADDI to identify addi instruction later when we parse further down.
       if(is_addi_instruction()){
         printf("instruction 70 detected");
       instruction = 79;
-
       }else {
-
+      // else just take the current instruction.
       instruction = is_instruction();
       }
        
-       
+        // Catch JAL, JALR, SD or SD cases as they also differ from the arguments they take. 
         if(identifier_string_match(SYM_JAL)){
 
           printf("got jal instruction");
@@ -5216,41 +5222,53 @@ void compile_assembly(){
           }
         }
 
+
+      // if all "unique" cases are not true, parse down all other cases
       get_symbol();
+
+      // get the first register
       if(is_register()){
       
         get_symbol();
-        printf(" first register detected");
+        //printf(" first register detected");
 
-       
+        // get the first comma
         if(symbol == SYM_COMMA){
           get_symbol();
-          printf(" first comma detected");
+          //printf(" first comma detected");
+
+          // get the second register
           if(is_register()){
 
             get_symbol();
-            printf("second register detected");
+            //printf("second register detected");
+
+            // get the second comma
             if(symbol == SYM_COMMA){
               get_symbol();
-              printf("second comma detected");
+              //printf("second comma detected");
+              
 
+              // try to find out if the literal is negative
               if(symbol == SYM_MINUS){
                 get_symbol();
                get_symbol();
                 printf("%lu",symbol);                
                 printf("got negative");
               }
+              // or "zero"
               else if(identifier_string_match(SYM_ZERO)){
                 printf(" value detected");
                 get_symbol();
-
+              // or a literal
               } else if(is_literal()) {  
                   printf("is literal");
                   while(is_literal())
                     get_symbol();                                                                              
-              } 
+              }
+              // or a register 
               else if(is_register()){
-                // if addi reject as we need a literal.
+                // if addi reject register as we need a literal.
                 if(instruction == 79){
                   printf("instruction addi detected");
                   syntax_error_expected_symbol(SYM_INTEGER);
@@ -5275,7 +5293,7 @@ void compile_assembly(){
   }
   
   }
-  
+
 uint64_t compile_type() {
   uint64_t type;
 
@@ -6936,6 +6954,10 @@ void selfie_compile_assembly();
 
 uint64_t is_lui_instruction();
 
+
+// Assignment 1 - Assembler Parser - Michael Lenort
+// is called whenever -a flag is set when running selfie. 
+// identical to selfie_compile except that it calls compile_assembly() instead of compile_cstar.
 void selfie_compile_assembly() {
   uint64_t link;
   uint64_t number_of_source_files;
@@ -12977,7 +12999,8 @@ uint64_t no_or_bad_or_more_arguments(uint64_t exit_code) {
   else
     return 0;
 }
-
+// Assignment 1 - Assembler Parser - Michael Lenort
+// add -a flag to possible arguments so that we can compile .s files. 
 void print_synopsis(char* extras) {
   printf("synopsis: %s { -c { source } | -o binary | -a RISCU | ( -s | -S ) assembly | -l binary }%s\n", selfie_name, extras);
 }
