@@ -4862,7 +4862,7 @@ void compile_assembly(){
   // RISCU Assembly Parser. Identifies all possible cases and parses them down
    
   uint64_t instruction;
-  //uint64_t r1;
+  uint64_t r1;
   //uint64_t r2;
   uint64_t value;
 
@@ -5029,32 +5029,24 @@ void compile_assembly(){
                     if(identifier_string_match_register(REG_RA)){
 
                       printf("got ra");
-
                       emit_jalr(REG_ZR, REG_RA, 0);
-
-
                       get_symbol();
 
                     }
 
                   }
-                  
-                
-
-
-            
-            
             }
           }
         }
         
         if(identifier_string_match(SYM_SD)){
 
-          printf("is ld instruction");
+          printf("is sd instruction");
           get_symbol();
 
           if(is_register()){
-
+            
+            r1 = symbol;
             get_symbol();
 
             if(symbol == SYM_COMMA){
@@ -5073,8 +5065,9 @@ void compile_assembly(){
 
                   printf("got num");
 
-
+                  value = symbol;
                   get_symbol();
+
 
                   if(symbol == SYM_LPARENTHESIS){
 
@@ -5082,22 +5075,37 @@ void compile_assembly(){
 
                     get_symbol();
 
+                    if(is_register()){
 
-                    if(identifier_string_match_register(REG_GP)){
-
-                      printf("got gp");
-
-                      get_symbol();
-
-                    }
-
-                    if(identifier_string_match_register(REG_SP)){
-
-                      printf("got sp");
+                      emit_store(is_register(), value, r1);
 
                       get_symbol();
-
                     }
+
+
+                    // if(identifier_string_match_register(REG_GP)){
+
+                    //   printf("got gp");
+
+                    //     //emit_store(REG_SP, 0, REG_RA);
+
+
+                    //   emit_store(REG_GP, value, r1);
+
+                    //   get_symbol();
+
+                    // }
+
+                    // if(identifier_string_match_register(REG_SP)){
+
+                    //   printf("got sp");
+
+                    //   emit_store(REG_SP, value, r1);
+
+
+                    //   get_symbol();
+
+                    // }
                   }
                   
                 }
@@ -5119,12 +5127,11 @@ void compile_assembly(){
                     get_symbol();
 
 
-                    if(identifier_string_match_register(REG_GP)){
+                    if(is_register()){
 
-                      printf("got gp");
+                      emit_store(is_register(), value, r1);
 
                       get_symbol();
-
                     }
                   }
                   
