@@ -4864,7 +4864,7 @@ void compile_assembly(){
   uint64_t instruction;
   //uint64_t r1;
   //uint64_t r2;
-  //uint64_t value;
+  uint64_t value;
 
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
@@ -4904,6 +4904,8 @@ void compile_assembly(){
       }
     } else if(is_ecall()){ // Used to identify ecall instruction, as it doesn't take any kind of further arguments.
 
+
+      emit_ecall();
       get_symbol();
 
       //printf("ecall detected");
@@ -4939,49 +4941,46 @@ void compile_assembly(){
                   
 
               printf("got comma");
-              get_symbol();
-
-              if(symbol == SYM_INTEGER){
 
 
+                 
+                    get_symbol();
+
+                    value = symbol;
                   printf("got num");
                   printf("%lu", symbol);
                     
-                  if(symbol == SYM_LPARENTHESIS){
+                
+                    if(identifier_string_match_register(REG_RA)){
 
-                    printf("got left");
+                      printf("got ra");
 
-                    get_symbol();
-
-
-                    if(identifier_string_match_register(REG_GP)){
-
-                      printf("got gp");
+                      emit_jal(REG_RA,value);
 
                       get_symbol();
 
                     }
 
-                    if(identifier_string_match_register(REG_SP)){
-
-                      printf("got sp");
-
-                      get_symbol();
-
-                    }
-                  }
-                  
-                }
-
+                 
 
               if(symbol == SYM_MINUS){
 
-                printf("got minus");
+                // printf("got minus");
 
                 while(is_literal()){
                   get_symbol();
                 }
+                value = symbol;
+                get_symbol();
+                 if(identifier_string_match_register(REG_RA)){
 
+                      printf("got ra");
+
+                      emit_jal(REG_RA,value);
+
+                      get_symbol();
+
+                    }
 
                
               }
@@ -5013,15 +5012,12 @@ void compile_assembly(){
 
               printf("got comma");
 
-              get_symbol();
-
-              if(symbol == SYM_INTEGER){
-
-
-                  printf("got num");
-
+                 
 
                   get_symbol();
+
+                  while(is_literal())
+                    get_symbol();
 
                   if(symbol == SYM_LPARENTHESIS){
 
@@ -5030,75 +5026,24 @@ void compile_assembly(){
                     get_symbol();
 
 
-                    if(identifier_string_match_register(REG_GP)){
+                    if(identifier_string_match_register(REG_RA)){
 
-                      printf("got gp");
+                      printf("got ra");
 
-                      get_symbol();
+                      emit_jalr(REG_ZR, REG_RA, 0);
 
-                    }
-
-                    if(identifier_string_match_register(REG_SP)){
-
-                      printf("got sp");
 
                       get_symbol();
 
                     }
+
                   }
                   
-                }
+                
 
 
-              if(symbol == SYM_MINUS){
-
-
-                if(symbol == SYM_INTEGER){
-
-
-                  printf("got num");
-
-
-                  get_symbol();
-
-                  if(symbol == SYM_LPARENTHESIS){
-
-                    printf("got left");
-
-                    get_symbol();
-
-
-                    if(identifier_string_match_register(REG_GP)){
-
-                      printf("got gp");
-
-                      get_symbol();
-
-                    }
-
-                    if(identifier_string_match_register(REG_SP)){
-
-                      printf("got sp");
-
-                      get_symbol();
-
-                    }
-                  }
-                  
-                }
-
-
-                printf("got minus");
-
-
-                get_symbol();
-                get_symbol();
-              }
-
-              while(is_literal()){
-
-                get_symbol();
-              }
+            
+            
             }
           }
         }
