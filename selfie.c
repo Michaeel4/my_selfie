@@ -527,9 +527,10 @@ uint64_t SYM_ADDI  = 79; // const
 uint64_t SYM_LW    = 80; // const
 uint64_t SYM_8BYTE = 81;
 uint64_t SYM_NOP = 82;
+uint64_t SYM_HEXAR = 83;
 
 
-uint64_t SYM_CONST = 83; // const
+uint64_t SYM_CONST = 84; // const
 
 // Assignment 1 - Assembler Parser - Michael Lenort
 // these uint64_t do identify a register / symbol
@@ -541,6 +542,12 @@ uint64_t get_instruction();
 // Assignment 2 - Self Assembler - Michael Lenort
 
 void emit_instructions(uint64_t instruct, uint64_t r1, uint64_t r2, uint64_t imm);
+
+// Assignment 2 - Self Assembler - Michael Lenort
+// Hex To Integer parser
+
+//uint64_t hex_to_integer();
+uint64_t is_hexar();
 
 // Assignment 1 - Assembler Parser - Michael Lenort
 // since addi needs an immediate, we must explicity check for it
@@ -647,6 +654,8 @@ void init_scanner () {
   *(SYMBOLS + SYM_SD)      = (uint64_t) "sd";
   *(SYMBOLS + SYM_8BYTE)      = (uint64_t) ".8byte"; // <- For .8byte, we must change the scanner to identify this keyword.
   *(SYMBOLS + SYM_NOP)      = (uint64_t) "nop";
+  *(SYMBOLS + SYM_HEXAR)      = (uint64_t) "0x";
+
 
   // Assignment 1 - Assembler Parser - Michael Lenort
   // We must define the additional symbols to identify 
@@ -4175,6 +4184,21 @@ void get_symbol() {
         } else
           symbol = SYM_GT;
       } 
+
+
+      // Assignmnet 2 - Self Assembler - Michael Lenort
+
+      else if(character == '0'){
+
+        get_character();
+
+        if(character == 'x'){
+          
+
+          symbol = SYM_HEXAR;
+          get_character();
+        }
+      }
       
        else if (character == CHAR_DOT) {
         get_character();
@@ -4183,7 +4207,23 @@ void get_symbol() {
 
           if(character == 'b'){
             get_character();
+
+             if(character == 'y'){
+            get_character();
             symbol = SYM_8BYTE;
+             if(character == 't'){
+            get_character();
+
+             if(character == 'e'){
+            get_character();
+            symbol = SYM_8BYTE;
+
+          }
+
+
+          }
+
+          }
 
           }
         }
@@ -4874,26 +4914,47 @@ void compile_assembly(){
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
   if(symbol == 81){
     get_symbol();
+    get_symbol();
+    get_symbol();
+
     printf("got 8byte");
-    return;
-  }
-    printf("%lu \n", symbol);
+
+    emit_data_segment();
+
+    printf("%lu", symbol);
+    //return;
+  } else if(is_lui_instruction()){
+
 
     // LUI case 
     // Load upper immediate - we must identify LUI cases, because LUI must have an immediate value
     // as the last argument unlike other instructions, which allow the access to registers as well.
-    if(is_lui_instruction()){
       get_symbol();
       //printf("is lui ");
 
       if(is_register()){
+
+
+        r1 = is_register();
         get_symbol();
         //printf("is register ");
 
         if(symbol == SYM_COMMA){
+
+          
           get_symbol();
           get_symbol();
           get_symbol();
+
+
+          value = symbol;
+
+          emit_lui(r1, value);
+          //   if(identifier_string_match(SYM_HEXAR)){
+
+          //   printf("is hexar");
+          //   return;
+          // }
           //printf("successfully got lui instruction, restarting... ");
         } else {
           syntax_error_expected_symbol(SYM_COMMA);
@@ -5235,7 +5296,8 @@ void compile_assembly(){
           }
         }
 
-
+        if(identifier_string_match(SYM_NOP))
+          emit_nop();
       // if all "unique" cases are not true, parse down all other cases
       get_symbol();
 
@@ -11026,6 +11088,16 @@ uint64_t is_ecall(){
 // as addi instruction as it can have an immediate value.
 uint64_t is_addi_instruction(){
   if(identifier_string_match(SYM_ADDI))
+    return 1;
+  else
+    return 0;
+}
+
+// Assignment 2 - Assembler Parser - Michael Lenort
+// check if hexa value
+
+uint64_t is_hexar(){
+  if(identifier_string_match(SYM_HEXAR))
     return 1;
   else
     return 0;
