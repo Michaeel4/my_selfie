@@ -4825,6 +4825,8 @@ uint64_t is_lui_instruction(){
 // Assignment 2 - Self Assembler - Michael Lenort
 // emit_insturctions is called from compile_assembly to emit operations. 
 // it takes 4 arguments and simply emits based upon all possible instruction the emitter.
+// seems a little bit unecessary, but it works just fine to determine the instruction and 
+// makes the assembly parser more "cleaner".
 
 void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm){
 
@@ -4832,6 +4834,8 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
   if(instruct == SYM_ADD){
     printf("emitting add instruction");
     emit_add(rd, r1, imm);
+
+  
     printf("succesfully emitted instruction");
   } else if (instruct == SYM_ADDI){
     printf("emitting addi instruction");
@@ -4841,6 +4845,7 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
   else if (instruct == SYM_SUB){
     printf("emitting sub instruction");
     emit_sub(rd, r1, imm);
+    return;
     printf("succesfully emitted instruction");
   }
    else if (instruct == SYM_MUL){
@@ -4900,10 +4905,10 @@ void compile_assembly(){
 
   // Assignment 1 - Assembler Parser - Michael Lenort
   // RISCU Assembly Parser. Identifies all possible cases and parses them down
-   
+  
   uint64_t instruction;
   uint64_t r1;
-  //uint64_t r2;
+  uint64_t r2;
   uint64_t value;
 
   // As long as EOF isn't reached, read further.
@@ -4920,6 +4925,8 @@ void compile_assembly(){
     printf("got 8byte");
 
     emit_data_segment();
+
+    
 
     printf("%lu", symbol);
     //return;
@@ -5303,7 +5310,7 @@ void compile_assembly(){
 
       // get the first register
       if(is_register()){
-      
+        r1 = is_register();
         get_symbol();
         //printf(" first register detected");
 
@@ -5315,6 +5322,8 @@ void compile_assembly(){
           // get the second register
           if(is_register()){
 
+            r2 = is_register();
+            
             get_symbol();
             //printf("second register detected");
 
@@ -5330,25 +5339,40 @@ void compile_assembly(){
                get_symbol();
                 printf("%lu",symbol);                
                 printf("got negative");
+
+                return;
               }
               // or "zero"
               else if(identifier_string_match(SYM_ZERO)){
                 printf(" value detected");
+
+                emit_instructions(instruction, r1, r2, REG_ZR);
+
+             
                 get_symbol();
               // or a literal
               } else if(is_literal()) {  
                   printf("is literal");
                   while(is_literal())
-                    get_symbol();                                                                              
+                    get_symbol();  
+
+                  value = symbol;
+
+                  emit_instructions(instruction, r1, r2, 5);  
+
+                                                                                       
               }
               // or a register 
               else if(is_register()){
+
+                value = is_register();
                 // if addi reject register as we need a literal.
                 if(instruction == 79){
                   printf("instruction addi detected");
                   syntax_error_expected_symbol(SYM_INTEGER);
                   return;
                 }
+                emit_instructions(instruction, r1, r2, value);                                                                            
 
                 printf("is register");
                 get_symbol();
