@@ -551,7 +551,7 @@ void emit_instructions(uint64_t instruct, uint64_t r1, uint64_t r2, uint64_t imm
 
 // The HEXAR - Is used to get from a hexadecimal value a integer value back. 
 
-char *hexar_magic(char c);
+uint64_t hexar_magic(char *s);
 //uint64_t hex_to_integer();
 uint64_t is_hexar();
 
@@ -4915,6 +4915,7 @@ void compile_assembly(){
   uint64_t r2;
   uint64_t value;
   char *value_char = 0;
+  uint64_t i;
 
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
@@ -4970,16 +4971,43 @@ void compile_assembly(){
               printf("is hexar!!");
                               get_character();
 
-              while(is_character_letter_or_digit_or_underscore()){
-                value_char = hexar_magic(character);
+              // while(is_character_letter_or_digit_or_underscore()){
+              //   value = hexar_magic(&character);
 
 
                 
-                get_character();
-              }
+              //   get_character();
+              // }
+
+              // accommodate integer and null for termination
+			integer = string_alloc(MAX_INTEGER_LENGTH);
+
+			i = 0;
+
+			while (is_character_letter_or_digit_or_underscore()) {
+			  if (i >= MAX_INTEGER_LENGTH) {
+				if (integer_is_signed)
+				  syntax_error_message("signed integer out of bound");
+				else
+				  syntax_error_message("integer out of bound");
+
+				exit(EXITCODE_SCANNERERROR);
+			  }
+			  store_character(integer, i, character);
+
+			  i = i + 1;
+
+        printf("i am getting all sequences for the hex value");
+
+			  get_character();
+			}
+
+			store_character(integer, i, 0); // null-terminated string
+
+			literal = hexar_magic(integer);
             }
           
-            
+            printf("%lu", literal);
             //return;
           }
           
@@ -11151,22 +11179,135 @@ uint64_t is_addi_instruction(){
 }
 
 // Assignment 2 - Assembler Parser - Michael Lenort
-// Hexar Magic
-
-char *hexar_magic(char c){
-
-
-  char *hex_value = 0;
+// Hexar Magic converts hex values into integer values.
+// Is used for assembly instruction where 0x sequences occur.
 
 
-  hex_value = 
-  // We convert here the hexa value given to an integer. 
-  // returns integer value back.
-  printf("%s", "the hexar value is");
-  printf("%s", hex_value);
+uint64_t hexar_magic(char* s) {
+  uint64_t i;
+  uint64_t n;
+  uint64_t c;
 
-  return hex_value;
+  // the conversion of the ASCII string in s to its
+  // numerical value n begins with the leftmost digit in s
+  i = 0;
+
+  // and the numerical value 0 for n
+  n = 0;
+
+  // load character (one byte) at index i in s from memory requires
+  // bit shifting since memory access can only be done at word granularity
+
+  // === Assignment 1 ===
+
+  // Check if the current character contains a hexadecimal prefix to detect hexadecimal values
+  
+
+    // iterate one step further to get the first character
+    // load the next character value 
+    c = load_character(s, i);
+
+    // as long as c is not zero, we have a valid value
+    while(c != 0){
+
+    i = i + 1;
+
+          //printf("%lu", i);
+
+
+      // check bound values to determine what we have to encode/decode
+
+      // detect upper letters
+      if(c >= 'A')
+        if(c <= 'F')
+          c = c - 55;
+
+      // detect lower letters
+      if(c >= 'a')
+        if(c <= 'f')
+          c = c - 67;
+
+      // detect numeric values
+      if(c >= '0')
+        if(c <= '9')
+          c = c - '0';
+
+
+      
+      n = n * 16 + c;
+
+
+
+      //get the next charakter
+     
+    c = load_character(s, i);
+
+    
+
+  }
+      return n;
+
+
+  // // loop until s is terminated
+  // while (c != 0) {
+  //   // the numerical value of ASCII-encoded decimal digits
+  //   // is offset by the ASCII code of '0' (which is 48)
+  //   c = c - '0';
+
+  //   if (c > 9) {
+  //     printf("%s: cannot convert non-decimal number %s\n", selfie_name, s);
+
+  //     exit(EXITCODE_SCANNERERROR);
+  //   }
+
+  //   // assert: s contains a decimal number
+
+  //   // use base 10 but detect wrap around
+  //   if (n < UINT_MAX / 16)
+  //     n = n * 16 + c;
+  //   else if (n == UINT_MAX / 16)
+  //     if (c <= UINT_MAX % 16)
+  //       n = n * 16 + c;
+  //     else {
+  //       // s contains a decimal number larger than UINT_MAX
+  //       printf("%s: cannot convert out-of-bound number %s\n", selfie_name, s);
+
+  //       exit(EXITCODE_SCANNERERROR);
+  //     }
+  //   else {
+  //     // s contains a decimal number larger than UINT_MAX
+  //     printf("%s: cannot convert out-of-bound number %s\n", selfie_name, s);
+
+  //     exit(EXITCODE_SCANNERERROR);
+  //   }
+
+  //   // go to the next digit
+  //   i = i + 1;
+
+  //   // load character (one byte) at index i in s from memory requires
+  //   // bit shifting since memory access can only be done at word granularity
+  //   c = load_character(s, i);
+  // }
+
+  // return n;
 }
+
+
+
+// char *hexar_magic(char c){
+
+
+//   char *hex_value = 0;
+
+
+//   hex_value = 
+//   // We convert here the hexa value given to an integer. 
+//   // returns integer value back.
+//   printf("%s", "the hexar value is");
+//   printf("%s", hex_value);
+
+//   return hex_value;
+// }
 
 // Assignment 2 - Assembler Parser - Michael Lenort
 // check if hexa value
