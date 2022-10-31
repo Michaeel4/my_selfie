@@ -429,6 +429,8 @@ char CHAR_GT           = '>';
 char CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 char CHAR_DOT          = '.';
 char CHAR_B          = 'b';
+char CHAR_ZERO       = '0';
+char CHAR_X          = 'x';
 
 
 uint64_t SYM_EOF = -1; // end of file
@@ -546,6 +548,10 @@ void emit_instructions(uint64_t instruct, uint64_t r1, uint64_t r2, uint64_t imm
 // Assignment 2 - Self Assembler - Michael Lenort
 // Hex To Integer parser
 
+
+// The HEXAR - Is used to get from a hexadecimal value a integer value back. 
+
+char *hexar_magic(char c);
 //uint64_t hex_to_integer();
 uint64_t is_hexar();
 
@@ -4188,11 +4194,11 @@ void get_symbol() {
 
       // Assignmnet 2 - Self Assembler - Michael Lenort
 
-      else if(character == '0'){
+      else if(character == CHAR_ZERO){
 
         get_character();
 
-        if(character == 'x'){
+        if(character == CHAR_X){
           
 
           symbol = SYM_HEXAR;
@@ -4830,12 +4836,11 @@ uint64_t is_lui_instruction(){
 
 void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm){
 
-
+  //printf("%lu", instruct);
   if(instruct == SYM_ADD){
     printf("emitting add instruction");
     emit_add(rd, r1, imm);
 
-  
     printf("succesfully emitted instruction");
   } else if (instruct == SYM_ADDI){
     printf("emitting addi instruction");
@@ -4845,7 +4850,6 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
   else if (instruct == SYM_SUB){
     printf("emitting sub instruction");
     emit_sub(rd, r1, imm);
-    return;
     printf("succesfully emitted instruction");
   }
    else if (instruct == SYM_MUL){
@@ -4910,6 +4914,7 @@ void compile_assembly(){
   uint64_t r1;
   uint64_t r2;
   uint64_t value;
+  char *value_char = 0;
 
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
@@ -4918,17 +4923,25 @@ void compile_assembly(){
   // Symbol 81 => SYM_8BYTE
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
   if(symbol == 81){
-    get_symbol();
-    get_symbol();
-    get_symbol();
-
+     get_symbol();
     printf("got 8byte");
+    return;
 
-    emit_data_segment();
+    // if(is_digit(symbol)){
+    //   get_symbol();
+    //   printf("is digit");
+    // }
+
+    // while(is_literal())
+    //   get_symbol();
+    // printf("got 8byte");
+
+    // emit_data_word()
 
     
 
-    printf("%lu", symbol);
+
+    printf("%lu \n", symbol);
     //return;
   } else if(is_lui_instruction()){
 
@@ -4948,8 +4961,28 @@ void compile_assembly(){
 
         if(symbol == SYM_COMMA){
 
+          if(character == '0'){
+           
+            get_character();
+
+            if(character == 'x'){
+
+              printf("is hexar!!");
+                              get_character();
+
+              while(is_character_letter_or_digit_or_underscore()){
+                value_char = hexar_magic(character);
+
+
+                
+                get_character();
+              }
+            }
           
-          get_symbol();
+            
+            //return;
+          }
+          
           get_symbol();
           get_symbol();
 
@@ -4986,10 +5019,11 @@ void compile_assembly(){
       if(is_addi_instruction()){
         printf("instruction 70 detected");
       instruction = 79;
-      }else {
-      // else just take the current instruction.
-      instruction = is_instruction();
-      }
+      } else
+        // else just take the current instruction.
+        instruction = is_instruction();
+     
+      
        
         // Catch JAL, JALR, SD or SD cases as they also differ from the arguments they take. 
         if(identifier_string_match(SYM_JAL)){
@@ -5006,12 +5040,8 @@ void compile_assembly(){
                     get_symbol();
                   
                   }
-                  
-
-              printf("got comma");
-
-
-                 
+                
+              printf("got comma"); 
                     get_symbol();
 
                     value = symbol;
@@ -5033,12 +5063,14 @@ void compile_assembly(){
 
               if(symbol == SYM_MINUS){
 
-                // printf("got minus");
+               
+
+                printf("got minus");
 
                 while(is_literal()){
                   get_symbol();
                 }
-                value = symbol;
+                value = -symbol;
                 get_symbol();
                  if(identifier_string_match_register(REG_RA)){
 
@@ -5340,7 +5372,6 @@ void compile_assembly(){
                 printf("%lu",symbol);                
                 printf("got negative");
 
-                return;
               }
               // or "zero"
               else if(identifier_string_match(SYM_ZERO)){
@@ -5358,7 +5389,7 @@ void compile_assembly(){
 
                   value = symbol;
 
-                  emit_instructions(instruction, r1, r2, 5);  
+                  emit_instructions(instruction, r1, r2, value);  
 
                                                                                        
               }
@@ -11107,6 +11138,8 @@ uint64_t is_ecall(){
     return 0;
 }
 
+
+
 // Assignment 1 - Assembler Parser - Michael Lenort
 // We need to explicity check if we have a addi instruction
 // as addi instruction as it can have an immediate value.
@@ -11118,7 +11151,27 @@ uint64_t is_addi_instruction(){
 }
 
 // Assignment 2 - Assembler Parser - Michael Lenort
+// Hexar Magic
+
+char *hexar_magic(char c){
+
+
+  char *hex_value = 0;
+
+
+  hex_value = 
+  // We convert here the hexa value given to an integer. 
+  // returns integer value back.
+  printf("%s", "the hexar value is");
+  printf("%s", hex_value);
+
+  return hex_value;
+}
+
+// Assignment 2 - Assembler Parser - Michael Lenort
 // check if hexa value
+
+
 
 uint64_t is_hexar(){
   if(identifier_string_match(SYM_HEXAR))
@@ -11132,37 +11185,37 @@ uint64_t is_hexar(){
 
 uint64_t is_instruction() {
   if(identifier_string_match(SYM_ADDI))
-    return 1;
+    return SYM_ADDI;
   else if(identifier_string_match(SYM_NOP))
-    return 1;
+    return SYM_NOP;
   else if (identifier_string_match(SYM_LD))
-    return 1;
+    return SYM_LD;
   else if (identifier_string_match(SYM_LW))
-    return 1;
+    return SYM_LW;
   else if (identifier_string_match(SYM_ADD))
-    return 1;
+    return SYM_ADD;
   else if (identifier_string_match(SYM_SUB))
-    return 1;
+    return SYM_SUB;
   else if (identifier_string_match(SYM_MUL))
-    return 1;
+    return SYM_MUL;
   else if (identifier_string_match(SYM_DIVU))
-    return 1;
+    return SYM_DIVU;
   else if (identifier_string_match(SYM_REMU))
-    return 1;
+    return SYM_REMU;
   else if (identifier_string_match(SYM_SLTU))
-    return 1;
+    return SYM_SLTU;
   else if (identifier_string_match(SYM_BEQ))
-    return 1;
+    return SYM_BEQ;
   else if (identifier_string_match(SYM_JAL))
-    return 1;
+    return SYM_JAL;
   else if (identifier_string_match(SYM_JALR))
-    return 1;
+    return SYM_JALR;
   else if (identifier_string_match(SYM_LUI))
-    return 1;
+    return SYM_LUI;
   else if (identifier_string_match(SYM_SD))
-    return 1;
+    return SYM_SD;
   else if (identifier_string_match(SYM_8BYTE))
-    return 1;
+    return SYM_8BYTE;
   else
     return 0;
 }
