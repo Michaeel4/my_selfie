@@ -5055,13 +5055,6 @@ void compile_assembly(){
       } else {
         syntax_error_expected_symbol(SYM_ADD);
       }
-    } else if(is_ecall()){ // Used to identify ecall instruction, as it doesn't take any kind of further arguments.
-
-
-      emit_ecall();
-      get_symbol();
-
-      //printf("ecall detected");
     } 
     
     // ALU / L | S Instructions Cases
@@ -5293,6 +5286,14 @@ void compile_assembly(){
           if(is_register()){
             get_symbol();
             if(symbol == SYM_COMMA){
+                  printf("%lu", literal);
+
+
+                  //value = atoi(character);
+
+                  printf("value is!!!");
+
+                  //printf("%lu", value);
 
               get_symbol();
               
@@ -5305,72 +5306,75 @@ void compile_assembly(){
                 get_symbol();
 
                 if(symbol == SYM_INTEGER){
+                  
 
 
-                  printf("got num");
-                  while(is_literal()){
-                    get_symbol();
-                  }
+
+                  get_symbol();
+                  value = -literal;
 
 
+                  printf("%lu", value);
 
                   if(symbol == SYM_LPARENTHESIS){
 
-                    printf("got left");
-
-                    get_symbol();
 
 
-                    if(identifier_string_match_register(REG_GP)){
+                    if(character == 's'){
 
-                      printf("got gp");
+                      printf("yes is s ");
 
-                      get_symbol();
-
+                      emit_load(r1, REG_SP, value);
                     }
 
+                    if(character == 'g'){
+                      emit_load(r1, REG_GP, value);
 
-                     if(identifier_string_match_register(REG_SP)){
-
-                      printf("got sp");
-
-                      get_symbol();
-
+                      printf("yes is g ");
                     }
-                  }
+
+                   
+
+                                        get_symbol();
+
+                  } 
+                
                   
                 }
 
               } else if(symbol == SYM_INTEGER){
 
 
-                  printf("got num");
+                  printf("got num2222222");
 
+                  printf("%lu", literal);
 
                   get_symbol();
+                  value = literal;
+
 
                   if(symbol == SYM_LPARENTHESIS){
 
                     printf("got left");
 
-                    get_symbol();
 
+                    if(character == 's'){
 
-                    if(identifier_string_match_register(REG_GP)){
+                      printf("yes is s ");
 
-                      printf("got gp");
-
-                      get_symbol();
-
+                      emit_load(r1, REG_SP, value);
                     }
 
-                     if(identifier_string_match_register(REG_SP)){
+                    if(character == 'g'){
+                      emit_load(r1, REG_GP, value);
 
-                      printf("got sp");
-
-                      get_symbol();
-
+                      printf("yes is g ");
                     }
+
+                   
+
+                                        get_symbol();
+
                   } 
                 }
             }
