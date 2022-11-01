@@ -5073,7 +5073,7 @@ void compile_assembly(){
         // Catch JAL, JALR, SD or SD cases as they also differ from the arguments they take. 
         if(identifier_string_match(SYM_JAL)){
 
-          //printf("got jal instruction");
+          printf("got jal instruction");
           get_symbol();
           if(is_register()){
 
@@ -5081,51 +5081,35 @@ void compile_assembly(){
             get_symbol();
 
             if(symbol == SYM_COMMA){
-               while(is_literal()){                    
-                    get_symbol();
-                  
-                  }
-                
-              //printf("got comma"); 
-                    get_symbol();
 
-                    value = symbol;
-                  //printf("got num");
-                  printf("%lu", symbol);
+              if(character == '-'){
+
+
+               get_symbol();
+               get_symbol();
+
+
+                printf("%lu", literal);
+
+
+                value = -literal;
+
+
+                emit_jal(r1, value);
+              } else if(is_character_letter_or_digit_or_underscore()){
+                get_symbol();
+                printf("%lu", literal);
+
+
+                emit_jal(r1, literal);
+                printf("yep literal!");
+              }
+
                     
-                
-                    if(identifier_string_match_register(REG_RA)){
-
-
-                      emit_jal(REG_RA,value);
-
-                      get_symbol();
-
-                    }
 
                  
 
-              if(symbol == SYM_MINUS){
-
-               
-
-                //printf("got minus");
-
-                while(is_literal()){
-                  get_symbol();
-                }
-                value = -symbol;
-                get_symbol();
-                 if(identifier_string_match_register(REG_RA)){
-
-                      emit_jal(REG_RA,value);
-
-                      get_symbol();
-
-                    }
-
-               
-              }
+            
 
              
             }
@@ -5179,129 +5163,78 @@ void compile_assembly(){
         
         if(identifier_string_match(SYM_SD)){
 
-          printf("is sd instruction");
           get_symbol();
 
           if(is_register()){
-            
-            r1 = symbol;
             get_symbol();
-
             if(symbol == SYM_COMMA){
-
               get_symbol();
               
               if(symbol == SYM_MINUS){
-
-
-
                 get_symbol();
 
                 if(symbol == SYM_INTEGER){
+                  
 
-
-
-                  value = symbol;
                   get_symbol();
+                  value = -literal;
 
+
+                  printf("%lu", value);
 
                   if(symbol == SYM_LPARENTHESIS){
 
 
-                    get_symbol();
 
-                    if(is_register()){
-
-                      emit_store(is_register(), value, r1);
-
-                      get_symbol();
+                    if(character == 's'){
+                      emit_store(r1, REG_SP, value);
                     }
 
+                    if(character == 'g'){
+                      emit_store(r1, REG_GP, value);
 
-                    // if(identifier_string_match_register(REG_GP)){
+                    }
+                    get_symbol();
 
-                    //   printf("got gp");
-
-                    //     //emit_store(REG_SP, 0, REG_RA);
-
-
-                    //   emit_store(REG_GP, value, r1);
-
-                    //   get_symbol();
-
-                    // }
-
-                    // if(identifier_string_match_register(REG_SP)){
-
-                    //   printf("got sp");
-
-                    //   emit_store(REG_SP, value, r1);
-
-
-                    //   get_symbol();
-
-                    // }
-                  }
+                  } 
+                
                   
                 }
 
-              } else 
-              {
-                 if(symbol == SYM_INTEGER){
+              } else if(symbol == SYM_INTEGER){
+               get_symbol();
+                  value = literal;
 
-
-                  printf("got num");
-
-
-                  get_symbol();
 
                   if(symbol == SYM_LPARENTHESIS){
+                  if(character == 's'){
+                      emit_store(r1, REG_SP, value);
+                    }
 
-                    printf("got left");
+                    if(character == 'g'){
+                      emit_store(r1, REG_GP, value);
+                    }
 
                     get_symbol();
 
-
-                    if(is_register()){
-
-                      emit_store(is_register(), value, r1);
-
-                      get_symbol();
-                    }
-                  }
-                  
+                  } 
                 }
-
-              }
-
             }
           }
         }
 
+
         if(identifier_string_match(SYM_LD)){
 
-          printf("is ld instruction");
           get_symbol();
 
           if(is_register()){
             get_symbol();
             if(symbol == SYM_COMMA){
-                  printf("%lu", literal);
-
-
-                  //value = atoi(character);
-
-                  printf("value is!!!");
-
-                  //printf("%lu", value);
-
+              
               get_symbol();
               
               if(symbol == SYM_MINUS){
-
-
-                printf("got minus");
-
 
                 get_symbol();
 
