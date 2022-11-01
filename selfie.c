@@ -4926,14 +4926,43 @@ void compile_assembly(){
   if(symbol == 81){
     
       get_character();
+      if(character == CHAR_ZERO){
+        get_character();
+        if(character == CHAR_X){
+          integer = string_alloc(MAX_INTEGER_LENGTH);
 
+			i = 0;
 
-      if(character == '0'){
+			while (is_character_letter_or_digit_or_underscore()) {
+			  if (i >= MAX_INTEGER_LENGTH) {
+				if (integer_is_signed)
+				  syntax_error_message("signed integer out of bound");
+				else
+				  syntax_error_message("integer out of bound");
 
-        printf("yes!");
+				exit(EXITCODE_SCANNERERROR);
+			  }
+			  store_character(integer, i, character);
+
+			  i = i + 1;
+
+        printf("i am getting all sequences for the hex value");
+
+			  get_character();
+			}
+
+			store_character(integer, i, 0); // null-terminated string
+
+      value = hexar_magic(integer);
+
       }
 
-      return;
+        
+
+      }
+
+      get_symbol();
+
 
   } else if(is_ecall()){
     emit_ecall();
@@ -4963,7 +4992,7 @@ void compile_assembly(){
 
             if(character == 'x'){
 
-              printf("is hexar!!");
+              //printf("is hexar!!");
                               get_character();
 
               // while(is_character_letter_or_digit_or_underscore()){
@@ -5040,7 +5069,7 @@ void compile_assembly(){
       
       // set instruction to 79 => SYM_ADDI to identify addi instruction later when we parse further down.
       if(is_addi_instruction()){
-        printf("instruction 70 detected");
+        //printf("instruction 70 detected");
       instruction = 79;
       } else
         // else just take the current instruction.
@@ -5051,11 +5080,11 @@ void compile_assembly(){
         // Catch JAL, JALR, SD or SD cases as they also differ from the arguments they take. 
         if(identifier_string_match(SYM_JAL)){
 
-          printf("got jal instruction");
+          //printf("got jal instruction");
           get_symbol();
           if(is_register()){
 
-            printf("got jal register");
+            //printf("got jal register");
             get_symbol();
 
             if(symbol == SYM_COMMA){
@@ -5064,17 +5093,16 @@ void compile_assembly(){
                   
                   }
                 
-              printf("got comma"); 
+              //printf("got comma"); 
                     get_symbol();
 
                     value = symbol;
-                  printf("got num");
+                  //printf("got num");
                   printf("%lu", symbol);
                     
                 
                     if(identifier_string_match_register(REG_RA)){
 
-                      printf("got ra");
 
                       emit_jal(REG_RA,value);
 
@@ -5088,7 +5116,7 @@ void compile_assembly(){
 
                
 
-                printf("got minus");
+                //printf("got minus");
 
                 while(is_literal()){
                   get_symbol();
@@ -5096,8 +5124,6 @@ void compile_assembly(){
                 value = -symbol;
                 get_symbol();
                  if(identifier_string_match_register(REG_RA)){
-
-                      printf("got ra");
 
                       emit_jal(REG_RA,value);
 
@@ -5120,20 +5146,17 @@ void compile_assembly(){
           
 
 
-          printf("got jalr instruction");
 
           get_symbol();
 
           if(is_register()){
 
-            printf("got jalr register");
 
             get_symbol();
 
             
             if(symbol == SYM_COMMA){
 
-              printf("got comma");
 
                  
 
@@ -5144,14 +5167,12 @@ void compile_assembly(){
 
                   if(symbol == SYM_LPARENTHESIS){
 
-                    printf("got left");
 
                     get_symbol();
 
 
                     if(identifier_string_match_register(REG_RA)){
 
-                      printf("got ra");
 
                       emit_jalr(REG_ZR, REG_RA, 0);
 
@@ -5180,14 +5201,12 @@ void compile_assembly(){
               if(symbol == SYM_MINUS){
 
 
-                printf("got minus");
 
                 get_symbol();
 
                 if(symbol == SYM_INTEGER){
 
 
-                  printf("got num");
 
                   value = symbol;
                   get_symbol();
@@ -5195,7 +5214,6 @@ void compile_assembly(){
 
                   if(symbol == SYM_LPARENTHESIS){
 
-                    printf("got left");
 
                     get_symbol();
 
