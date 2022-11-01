@@ -4914,7 +4914,7 @@ void compile_assembly(){
   uint64_t r1;
   uint64_t r2;
   uint64_t value;
-  char *value_char = 0;
+  //char *value_char = 0;
   uint64_t i;
 
   // As long as EOF isn't reached, read further.
@@ -4924,9 +4924,12 @@ void compile_assembly(){
   // Symbol 81 => SYM_8BYTE
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
   if(symbol == 81){
-     get_symbol();
-    printf("got 8byte");
-    return;
+    
+      printf("got 8byte");  
+      get_symbol();
+
+      printf("%lu", symbol);
+      return;
 
     // if(is_digit(symbol)){
     //   get_symbol();
@@ -4942,8 +4945,11 @@ void compile_assembly(){
     
 
 
-    printf("%lu \n", symbol);
     //return;
+  } else if(is_ecall()){
+    emit_ecall();
+        get_symbol();
+
   } else if(is_lui_instruction()){
 
 
@@ -4961,7 +4967,7 @@ void compile_assembly(){
         //printf("is register ");
 
         if(symbol == SYM_COMMA){
-
+          
           if(character == '0'){
            
             get_character();
@@ -4974,7 +4980,7 @@ void compile_assembly(){
               // while(is_character_letter_or_digit_or_underscore()){
               //   value = hexar_magic(&character);
 
-
+              get_character();
                 
               //   get_character();
               // }
@@ -5005,6 +5011,10 @@ void compile_assembly(){
 			store_character(integer, i, 0); // null-terminated string
 
 			literal = hexar_magic(integer);
+
+          value = symbol;
+
+          emit_lui(r1, value);
             }
           
             printf("%lu", literal);
@@ -5012,12 +5022,8 @@ void compile_assembly(){
           }
           
           get_symbol();
-          get_symbol();
 
 
-          value = symbol;
-
-          emit_lui(r1, value);
           //   if(identifier_string_match(SYM_HEXAR)){
 
           //   printf("is hexar");
@@ -5157,8 +5163,9 @@ void compile_assembly(){
                     if(identifier_string_match_register(REG_RA)){
 
                       printf("got ra");
+
                       emit_jalr(REG_ZR, REG_RA, 0);
-                      get_symbol();
+
 
                     }
 
