@@ -4925,27 +4925,16 @@ void compile_assembly(){
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
   if(symbol == 81){
     
-      printf("got 8byte");  
-      get_symbol();
+      get_character();
 
-      printf("%lu", symbol);
+
+      if(character == '0'){
+
+        printf("yes!");
+      }
+
       return;
 
-    // if(is_digit(symbol)){
-    //   get_symbol();
-    //   printf("is digit");
-    // }
-
-    // while(is_literal())
-    //   get_symbol();
-    // printf("got 8byte");
-
-    // emit_data_word()
-
-    
-
-
-    //return;
   } else if(is_ecall()){
     emit_ecall();
         get_symbol();
