@@ -4836,6 +4836,12 @@ uint64_t is_lui_instruction(){
 
 void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm){
 
+
+  
+
+
+  
+
   //printf("%lu", instruct);
   if(instruct == SYM_ADD){
     printf("emitting add instruction");
@@ -4853,17 +4859,17 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
     printf("succesfully emitted instruction");
   }
    else if (instruct == SYM_MUL){
-    printf("emitting sub instruction");
+    printf("emitting mul instruction");
     emit_mul(rd, r1, imm);
     printf("succesfully emitted instruction");
   }
    else if (instruct == SYM_DIVU){
-    printf("emitting sub instruction");
+    printf("emitting divu instruction");
     emit_divu(rd, r1, imm);
     printf("succesfully emitted instruction");
   }
   else if (instruct == SYM_REMU){
-    printf("emitting sub instruction");
+    printf("emitting remu instruction");
     emit_remu(rd, r1, imm);
     printf("succesfully emitted instruction");
   }
@@ -4873,10 +4879,18 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
     printf("succesfully emitted instruction");
   }
    else if (instruct == SYM_BEQ){
-    printf("emitting sub instruction");
+  
+
+    printf("beq is");
+    printf("emitting beq instruction");
     emit_beq(rd, r1, imm);
     printf("succesfully emitted instruction");
+    
   }
+
+  
+
+
 }
 
 
@@ -4917,6 +4931,10 @@ void compile_assembly(){
   //char *value_char = 0;
   uint64_t i;
 
+  uint64_t ld_counter;
+
+  ld_counter = 0;
+
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
 
@@ -4946,7 +4964,7 @@ void compile_assembly(){
 
 			  i = i + 1;
 
-        printf("i am getting all sequences for the hex value");
+        //printf("i am getting all sequences for the hex value");
 
 			  get_character();
 			}
@@ -4954,6 +4972,9 @@ void compile_assembly(){
 			store_character(integer, i, 0); // null-terminated string
 
       value = hexar_magic(integer);
+
+      store_data(data_size, value);
+      data_size = data_size + WORDSIZE;
 
       }
 
@@ -4965,8 +4986,8 @@ void compile_assembly(){
 
 
   } else if(is_ecall()){
+    get_symbol();
     emit_ecall();
-        get_symbol();
 
   } else if(is_lui_instruction()){
 
@@ -5021,8 +5042,6 @@ void compile_assembly(){
 
 			  i = i + 1;
 
-        printf("i am getting all sequences for the hex value");
-
 			  get_character();
 			}
 
@@ -5055,7 +5074,12 @@ void compile_assembly(){
       } else {
         syntax_error_expected_symbol(SYM_ADD);
       }
-    } 
+    } else if(identifier_string_match(SYM_NOP)){
+          emit_nop();
+          get_symbol();
+
+       }
+
     
     // ALU / L | S Instructions Cases
     else if (is_instruction()){
@@ -5067,15 +5091,17 @@ void compile_assembly(){
       } else
         // else just take the current instruction.
         instruction = is_instruction();
-     
-      
+
+
+        
        
         // Catch JAL, JALR, SD or SD cases as they also differ from the arguments they take. 
         if(identifier_string_match(SYM_JAL)){
 
-          printf("got jal instruction");
           get_symbol();
           if(is_register()){
+
+            r1 = is_register();
 
             //printf("got jal register");
             get_symbol();
@@ -5102,7 +5128,6 @@ void compile_assembly(){
 
 
                 emit_jal(r1, literal);
-                printf("yep literal!");
               }
 
                     
@@ -5119,7 +5144,7 @@ void compile_assembly(){
           }
         }
 
-        if(identifier_string_match(SYM_JALR)){
+        else if(identifier_string_match(SYM_JALR)){
           
 
 
@@ -5127,7 +5152,7 @@ void compile_assembly(){
           get_symbol();
 
           if(is_register()){
-
+            r1 = is_register();
 
             get_symbol();
 
@@ -5137,11 +5162,10 @@ void compile_assembly(){
 
                  
 
+
                   get_symbol();
-
-                  while(is_literal())
-                    get_symbol();
-
+                  value = literal;
+                  get_symbol();
                   if(symbol == SYM_LPARENTHESIS){
 
 
@@ -5149,7 +5173,6 @@ void compile_assembly(){
 
 
                     if(identifier_string_match_register(REG_RA)){
-
 
                       emit_jalr(REG_ZR, REG_RA, 0);
 
@@ -5161,11 +5184,13 @@ void compile_assembly(){
           }
         }
         
-        if(identifier_string_match(SYM_SD)){
+        else if(identifier_string_match(SYM_SD)){
 
           get_symbol();
 
           if(is_register()){
+
+            r1 = is_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               get_symbol();
@@ -5183,18 +5208,28 @@ void compile_assembly(){
                   printf("%lu", value);
 
                   if(symbol == SYM_LPARENTHESIS){
-
-
-
-                    if(character == 's'){
-                      emit_store(r1, REG_SP, value);
-                    }
-
-                    if(character == 'g'){
-                      emit_store(r1, REG_GP, value);
-
-                    }
                     get_symbol();
+                    if(is_register()){
+                      
+
+                      r2 = is_register();
+
+                      
+                      printf("\n %lu", is_register());
+                      printf("FOUND NEGATIVE REGISTER");
+
+                       emit_store(r1, value, r2);
+                    }
+
+                    // if(character == 's'){
+                    //   emit_store(r1, value, REG_SP);
+                    // }
+
+                    // if(character == 'g'){
+                    //   emit_store(r1, value, REG_GP);
+
+                    // }
+                    // get_symbol();
 
                   } 
                 
@@ -5202,33 +5237,43 @@ void compile_assembly(){
                 }
 
               } else if(symbol == SYM_INTEGER){
+
+
                get_symbol();
-                  value = literal;
 
+               printf("%lu", literal);
 
-                  if(symbol == SYM_LPARENTHESIS){
-                  if(character == 's'){
-                      emit_store(r1, REG_SP, value);
+               value = literal;
+
+               if(symbol == SYM_LPARENTHESIS){
+
+                get_symbol();
+                    if(is_register()){
+                      
+
+                      r2 = is_register();
+
+                      
+                      printf("\n %lu", is_register());
+                      printf("FOUND NEGATIVE REGISTER");
+
+                       emit_store(r1, value, r2);
                     }
 
-                    if(character == 'g'){
-                      emit_store(r1, REG_GP, value);
-                    }
-
-                    get_symbol();
-
-                  } 
+               }
                 }
             }
           }
         }
 
 
-        if(identifier_string_match(SYM_LD)){
+        else if(identifier_string_match(SYM_LD)){
 
           get_symbol();
 
           if(is_register()){
+
+            r1 = is_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               
@@ -5251,20 +5296,35 @@ void compile_assembly(){
 
                   if(symbol == SYM_LPARENTHESIS){
 
+                      get_symbol();
+
+                      if(is_register()){
+
+                        r2 = is_register();
 
 
-                    if(character == 's'){
+                        emit_load(r1, r2, value);
+                      }
 
-                      printf("yes is s ");
+          //           if(character == 's'){
+          // ld_counter = ld_counter + 1;
 
-                      emit_load(r1, REG_SP, value);
-                    }
+          //             printf("yes is s ");
 
-                    if(character == 'g'){
-                      emit_load(r1, REG_GP, value);
+          //             emit_load(r1, REG_SP, value);
+          //           } 
 
-                      printf("yes is g ");
-                    }
+          //           else if(character == 'g'){
+          //                       ld_counter = ld_counter + 1;
+
+          //             emit_load(r1, REG_GP, value);
+
+          //             printf("yes is g ");
+          //           } else {
+          //                                   printf("g failed in negative");
+
+          //             return;
+          //           }
 
                    
 
@@ -5280,29 +5340,49 @@ void compile_assembly(){
 
                   printf("got num2222222");
 
+
+                  value = literal;
+
                   printf("%lu", literal);
 
                   get_symbol();
-                  value = literal;
-
-
                   if(symbol == SYM_LPARENTHESIS){
+                    get_symbol();
+                    if(is_register()){
 
-                    printf("got left");
+                      
+
+                      r2 = is_register();
 
 
-                    if(character == 's'){
+                      printf("found register!");
 
-                      printf("yes is s ");
+                      emit_load(r1, r2, value);
 
-                      emit_load(r1, REG_SP, value);
+                      printf("%lu", is_register());
                     }
+                    // printf("got left");
 
-                    if(character == 'g'){
-                      emit_load(r1, REG_GP, value);
 
-                      printf("yes is g ");
-                    }
+                    // printf("%c", character);
+                    // if(character == 's'){
+
+                    //   printf("yes is s ");
+                    //   ld_counter = ld_counter + 1;
+
+                    //   emit_load(r1, REG_SP, value);
+                    // } 
+                    // else if(character == 'g'){
+                    //   emit_load(r1, REG_GP, value);
+                    //   ld_counter = ld_counter + 1;
+
+                    //   printf("yes is g ");
+                    // } else {
+                      
+                    //   printf("g failed in postive");
+
+                    //   return;
+                    // }
 
                    
 
@@ -5312,10 +5392,8 @@ void compile_assembly(){
                 }
             }
           }
-        }
-
-        if(identifier_string_match(SYM_NOP))
-          emit_nop();
+        } 
+       
       // if all "unique" cases are not true, parse down all other cases
       get_symbol();
 
@@ -5323,7 +5401,7 @@ void compile_assembly(){
       if(is_register()){
         r1 = is_register();
         get_symbol();
-        //printf(" first register detected");
+        printf(" first register detected");
 
         // get the first comma
         if(symbol == SYM_COMMA){
@@ -5332,43 +5410,52 @@ void compile_assembly(){
 
           // get the second register
           if(is_register()){
-
             r2 = is_register();
-            
             get_symbol();
             //printf("second register detected");
-
             // get the second comma
             if(symbol == SYM_COMMA){
-              get_symbol();
               //printf("second comma detected");
               
+            
+              if(character == '-'){
+
+
+                get_symbol();
+                get_symbol();
+
+                printf("%lu", literal);
+
+                printf("FOUND MINUS!");
+
+
+                emit_instructions(instruction, r1, r2, -literal);
+              }           
+
+              get_symbol();
+
 
               // try to find out if the literal is negative
-              if(symbol == SYM_MINUS){
-                get_symbol();
-               get_symbol();
-                printf("%lu",symbol);                
-                printf("got negative");
-
-              }
+            
               // or "zero"
-              else if(identifier_string_match(SYM_ZERO)){
+            if(identifier_string_match(SYM_ZERO)){
                 printf(" value detected");
-
+if(instruction == 79){
+                    ld_counter = ld_counter + 1;
+                  }
                 emit_instructions(instruction, r1, r2, REG_ZR);
 
              
                 get_symbol();
               // or a literal
               } else if(is_literal()) {  
-                  printf("is literal");
-                  while(is_literal())
-                    get_symbol();  
-
-                  value = symbol;
-
+                  printf("%lu", literal);
+                  value = literal;
+                  if(instruction == 79){
+                    ld_counter = ld_counter + 1;
+                  }
                   emit_instructions(instruction, r1, r2, value);  
+                  get_symbol();
 
                                                                                        
               }
@@ -5382,19 +5469,23 @@ void compile_assembly(){
                   syntax_error_expected_symbol(SYM_INTEGER);
                   return;
                 }
+               
                 emit_instructions(instruction, r1, r2, value);                                                                            
 
                 printf("is register");
                 get_symbol();
-              }
-              
+              } 
             } else {
               syntax_error_expected_symbol(SYM_COMMA);
             }
           }
         }
       }
+        
       printf("normal instruction detected");
+
+      printf("%lu", ld_counter);
+        
     } else {
       syntax_error_expected_symbol(SYM_IDENTIFIER);
       return;
