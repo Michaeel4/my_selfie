@@ -5036,23 +5036,24 @@ void compile_assembly(){
             if(character == 'x'){
 
               //printf("is hexar!!");
-                              get_character();
 
               // while(is_character_letter_or_digit_or_underscore()){
               //   value = hexar_magic(&character);
 
-              get_character();
                 
               //   get_character();
               // }
 
               // accommodate integer and null for termination
-			integer = string_alloc(MAX_INTEGER_LENGTH);
+
+
+              get_character();
+			integer = string_alloc(MAX_STRING_LENGTH);
 
 			i = 0;
 
 			while (is_character_letter_or_digit_or_underscore()) {
-			  if (i >= MAX_INTEGER_LENGTH) {
+			  if (i >= MAX_STRING_LENGTH) {
 				if (integer_is_signed)
 				  syntax_error_message("signed integer out of bound");
 				else
@@ -5064,22 +5065,23 @@ void compile_assembly(){
 
 			  i = i + 1;
 
-
+        printf("%c", character);
 			  get_character();
+
 			}
 
 			store_character(integer, i, 0); // null-terminated string
 
 			literal = hexar_magic(integer);
 
+      //printf("%lu", literal);
 
-          emit_lui(r1, literal);
-          printf("lui print");
+          emit_lui(r1, sign_extend(literal,20));
           print_lui();
 
             }
           
-            printf("%lu", literal);
+            //printf("%lu", literal);
             //return;
           }
           
