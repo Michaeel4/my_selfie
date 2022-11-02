@@ -4851,6 +4851,7 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
   } else if (instruct == SYM_ADDI){
     printf("emitting addi instruction");
     emit_addi(rd, r1, imm);
+    return;
     printf("succesfully emitted instruction");
   }
   else if (instruct == SYM_SUB){
@@ -4938,6 +4939,9 @@ void compile_assembly(){
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
 
+
+
+  
   // .8byte case writing to memory
   // Symbol 81 => SYM_8BYTE
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
@@ -4991,7 +4995,6 @@ void compile_assembly(){
 
   } else if(is_lui_instruction()){
 
-
     // LUI case 
     // Load upper immediate - we must identify LUI cases, because LUI must have an immediate value
     // as the last argument unlike other instructions, which allow the access to registers as well.
@@ -5042,6 +5045,7 @@ void compile_assembly(){
 
 			  i = i + 1;
 
+
 			  get_character();
 			}
 
@@ -5049,9 +5053,11 @@ void compile_assembly(){
 
 			literal = hexar_magic(integer);
 
-          value = symbol;
 
-          emit_lui(r1, value);
+          emit_lui(r1, literal);
+          printf("lui print");
+          print_lui();
+
             }
           
             printf("%lu", literal);
@@ -5078,11 +5084,12 @@ void compile_assembly(){
           emit_nop();
           get_symbol();
 
-       }
+       
 
+  
     
     // ALU / L | S Instructions Cases
-    else if (is_instruction()){
+    } else if (is_instruction()){
       
       // set instruction to 79 => SYM_ADDI to identify addi instruction later when we parse further down.
       if(is_addi_instruction()){
@@ -5129,25 +5136,12 @@ void compile_assembly(){
 
                 emit_jal(r1, literal);
               }
-
-                    
-
-                 
-
-            
-
-             
             }
           } else {
-
             syntax_error_expected_symbol(SYM_ADD);
           }
         }
-
         else if(identifier_string_match(SYM_JALR)){
-          
-
-
 
           get_symbol();
 
@@ -5155,13 +5149,8 @@ void compile_assembly(){
             r1 = is_register();
 
             get_symbol();
-
             
             if(symbol == SYM_COMMA){
-
-
-                 
-
 
                   get_symbol();
                   value = literal;
@@ -5178,7 +5167,6 @@ void compile_assembly(){
 
 
                     }
-
                   }
             }
           }
@@ -5428,8 +5416,10 @@ void compile_assembly(){
 
                 printf("FOUND MINUS!");
 
+                value = -literal;
 
-                emit_instructions(instruction, r1, r2, -literal);
+
+                emit_instructions(instruction, r1, r2, value);
               }           
 
               get_symbol();
@@ -5439,11 +5429,10 @@ void compile_assembly(){
             
               // or "zero"
             if(identifier_string_match(SYM_ZERO)){
-                printf(" value detected");
 if(instruction == 79){
                     ld_counter = ld_counter + 1;
                   }
-                emit_instructions(instruction, r1, r2, REG_ZR);
+                emit_instructions(instruction, r1, r2, 0);
 
              
                 get_symbol();
@@ -5465,14 +5454,12 @@ if(instruction == 79){
                 value = is_register();
                 // if addi reject register as we need a literal.
                 if(instruction == 79){
-                  printf("instruction addi detected");
                   syntax_error_expected_symbol(SYM_INTEGER);
                   return;
                 }
                
                 emit_instructions(instruction, r1, r2, value);                                                                            
 
-                printf("is register");
                 get_symbol();
               } 
             } else {
@@ -5491,8 +5478,8 @@ if(instruction == 79){
       return;
     }
   }
-  
-  }
+}
+
 
 uint64_t compile_type() {
   uint64_t type;
@@ -7157,152 +7144,37 @@ uint64_t is_lui_instruction();
 // is called whenever -a flag is set when running selfie. 
 // identical to selfie_compile except that it calls compile_assembly() instead of compile_cstar.
 void selfie_compile_assembly() {
-  uint64_t link;
-  uint64_t number_of_source_files;
-  uint64_t fetch_dss_code_location;
+  source_name = get_argument();
 
-  fetch_dss_code_location = 0;
+  // assert: assembly_name is mapped and not longer than MAX_FILENAME_LENGTH
 
-  // link until next console option
-  link = 1;
+  source_fd = sign_extend(open(source_name, O_RDONLY, 0), SYSCALL_BITWIDTH);
 
-  number_of_source_files = 0;
+  if (signed_less_than(source_fd, 0)) {
+    printf("%s: could not open assembly input file %s\n", selfie_name, source_name);
 
-  source_name = "library";
+    exit(EXITCODE_IOERROR);
+  }
 
-  binary_name = source_name;
-
-  reset_binary();
-
-  // allocate zeroed memory for storing binary
+   // allocate zeroed memory for storing binary
   code_binary = zmalloc(MAX_CODE_SIZE);
   data_binary = zmalloc(MAX_DATA_SIZE);
 
   // allocate zeroed memory for storing source code line numbers
   code_line_number = zmalloc(MAX_CODE_SIZE / INSTRUCTIONSIZE * SIZEOFUINT64);
   data_line_number = zmalloc(MAX_DATA_SIZE / WORDSIZE * SIZEOFUINT64);
-
-  reset_symbol_tables();
-  reset_instruction_counters();
-
-  emit_program_entry();
-
-  // emit system call wrappers
-  // exit code must be first
-  emit_exit();
-  emit_read();
-  emit_write();
-  emit_open();
-
-  emit_malloc();
-
-  emit_switch();
-
-  if (GC_ON) {
-    emit_fetch_stack_pointer();
-    emit_fetch_global_pointer();
-
-    // save code location of eventual fetch_data_segment_size implementation
-    fetch_dss_code_location = code_size;
-
-    emit_fetch_data_segment_size_interface();
-  }
-
-  // declare macros in library symbol table to override entries in global symbol table
-  create_symbol_table_entry(LIBRARY_TABLE, "var_start", 0, MACRO, VOID_T, 1, 0);
-  create_symbol_table_entry(LIBRARY_TABLE, "var_arg", 0, MACRO, UINT64_T, 1, 0);
-  create_symbol_table_entry(LIBRARY_TABLE, "var_end", 0, MACRO, VOID_T, 1, 0);
-
-  // declare main procedure in global symbol table
-  // use main_name string to obtain unique hash
-  create_symbol_table_entry(GLOBAL_TABLE, main_name, 0, PROCEDURE, UINT64_T, 0, 0);
-
-  while (link) {
-    if (number_of_remaining_arguments() == 0)
-      link = 0;
-    else if (load_character(peek_argument(0), 0) == '-')
-      link = 0;
-    else {
-      source_name = get_argument();
-
-      number_of_source_files = number_of_source_files + 1;
-
-      printf("%s: selfie compiling %s to %lu-bit RISC-U with %lu-bit starc\n", selfie_name,
-        source_name, WORDSIZEINBITS, SIZEOFUINT64INBITS);
-
-      // assert: source_name is mapped and not longer than MAX_FILENAME_LENGTH
-
-      source_fd = open_read_only(source_name);
-
-      if (signed_less_than(source_fd, 0)) {
-        printf("%s: could not open input file %s\n", selfie_name, source_name);
-
-        exit(EXITCODE_IOERROR);
-      }
-
-      reset_scanner();
-      reset_parser();
-
-      //compile_cstar();
-
-      compile_assembly();
-
-      printf("%s: %lu characters read in %lu lines and %lu comments\n", selfie_name,
-        number_of_read_characters,
-        line_number,
-        number_of_comments);
-
-      printf("%s: with %lu(%lu.%.2lu%%) characters in %lu actual symbols\n", selfie_name,
-        number_of_read_characters - number_of_ignored_characters,
-        percentage_format_integral_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
-        percentage_format_fractional_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
-        number_of_scanned_symbols);
-
-      printf("%s: %lu global variables, %lu procedures, %lu string literals\n", selfie_name,
-        number_of_global_variables,
-        number_of_procedures,
-        number_of_strings);
-
-      printf("%s: %lu calls, %lu assignments, %lu while, %lu if, %lu return\n", selfie_name,
-        number_of_calls,
-        number_of_assignments,
-        number_of_while,
-        number_of_if,
-        number_of_return);
-
-      if (number_of_syntax_errors != 0) {
-        printf("%s: encountered %lu syntax errors while compiling %s - omitting output\n",
-          selfie_name,
-          number_of_syntax_errors,
-          source_name);
-        exit(EXITCODE_SYNTAXERROR);
-      }
-    }
-  }
-
-  if (number_of_source_files == 0)
-    printf("%s: nothing to compile, only library generated\n", selfie_name);
-
-  emit_bootstrapping();
-
-  if (GC_ON)
-    emit_fetch_data_segment_size_implementation(fetch_dss_code_location);
-
-  emit_data_segment();
-
-  ELF_header = encode_elf_header();
-
-  printf("%s: symbol table search time was %lu iterations on average and %lu in total\n", selfie_name,
-    total_search_time / number_of_searches,
-    total_search_time);
-
-  printf("%s: %lu bytes generated with %lu instructions and %lu bytes of data\n", selfie_name,
-    code_size + data_size,
-    code_size / INSTRUCTIONSIZE,
-    data_size);
-
-  print_instruction_counters();
+  reset_scanner();
+  get_symbol();
+  while(symbol != SYM_EOF) {
+    compile_assembly();
+	
+  }	
+   ELF_header = encode_elf_header();
+  //ELF_header = create_elf_header(binary_length, code_length);
+  
+  //entry_point = ELF_ENTRY_POINT;
 }
+  
 
 void selfie_compile() {
   uint64_t link;
