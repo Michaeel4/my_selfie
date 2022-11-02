@@ -541,6 +541,7 @@ uint64_t is_register();
 uint64_t is_instruction();
 uint64_t get_instruction();
 
+uint64_t get_register();
 // Assignment 2 - Self Assembler - Michael Lenort
 
 void emit_instructions(uint64_t instruct, uint64_t r1, uint64_t r2, uint64_t imm);
@@ -4205,6 +4206,21 @@ void get_symbol() {
           get_character();
         }
       }
+
+      else if(character == 'z'){
+
+        get_character();
+
+        if(character == 'e'){
+
+          get_character();
+
+          if(character == 'r'){
+
+            symbol = SYM_ZERO;
+          }
+        }
+      }
       
        else if (character == CHAR_DOT) {
         get_character();
@@ -5004,7 +5020,7 @@ void compile_assembly(){
       if(is_register()){
 
 
-        r1 = is_register();
+        r1 = get_register();
         get_symbol();
         //printf("is register ");
 
@@ -5108,7 +5124,7 @@ void compile_assembly(){
           get_symbol();
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
 
             //printf("got jal register");
             get_symbol();
@@ -5146,7 +5162,7 @@ void compile_assembly(){
           get_symbol();
 
           if(is_register()){
-            r1 = is_register();
+            r1 = get_register();
 
             get_symbol();
             
@@ -5178,7 +5194,7 @@ void compile_assembly(){
 
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               get_symbol();
@@ -5200,13 +5216,13 @@ void compile_assembly(){
                     if(is_register()){
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
                       
                       printf("\n %lu", is_register());
                       printf("FOUND NEGATIVE REGISTER");
 
-                       emit_store(r1, value, r2);
+                       emit_store(r2, value, r1);
                     }
 
                     // if(character == 's'){
@@ -5239,13 +5255,13 @@ void compile_assembly(){
                     if(is_register()){
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
                       
                       printf("\n %lu", is_register());
                       printf("FOUND NEGATIVE REGISTER");
 
-                       emit_store(r1, value, r2);
+                       emit_store(r2, value, r1);
                     }
 
                }
@@ -5261,7 +5277,7 @@ void compile_assembly(){
 
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               
@@ -5288,7 +5304,7 @@ void compile_assembly(){
 
                       if(is_register()){
 
-                        r2 = is_register();
+                        r2 = get_register();
 
 
                         emit_load(r1, r2, value);
@@ -5340,7 +5356,7 @@ void compile_assembly(){
 
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
 
                       printf("found register!");
@@ -5387,7 +5403,7 @@ void compile_assembly(){
 
       // get the first register
       if(is_register()){
-        r1 = is_register();
+        r1 = get_register();
         get_symbol();
         printf(" first register detected");
 
@@ -5398,7 +5414,7 @@ void compile_assembly(){
 
           // get the second register
           if(is_register()){
-            r2 = is_register();
+            r2 = get_register();
             get_symbol();
             //printf("second register detected");
             // get the second comma
@@ -5432,7 +5448,8 @@ void compile_assembly(){
 if(instruction == 79){
                     ld_counter = ld_counter + 1;
                   }
-                emit_instructions(instruction, r1, r2, 0);
+                
+                emit_instructions(instruction, r1, r2, literal);
 
              
                 get_symbol();
@@ -5451,7 +5468,7 @@ if(instruction == 79){
               // or a register 
               else if(is_register()){
 
-                value = is_register();
+                value = get_register();
                 // if addi reject register as we need a literal.
                 if(instruction == 79){
                   syntax_error_expected_symbol(SYM_INTEGER);
@@ -10998,74 +11015,7 @@ uint64_t get_instruction() {
 	exit(EXITCODE_SCANNERERROR);
 }
 
-uint64_t get_register() {
-	if (identifier_string_match(REG_ZR))
-		return REG_ZR;
-	else if (identifier_string_match(SYM_RA))
-		return SYM_RA;
-	else if (identifier_string_match(SYM_SP))
-		return SYM_SP;
-	else if (identifier_string_match(SYM_GP))
-		return SYM_GP;
-	else if (identifier_string_match(SYM_TP))
-		return SYM_TP;
-	else if (identifier_string_match(SYM_T0))
-		return SYM_T0;
-	else if (identifier_string_match(SYM_T1))
-		return SYM_T1;
-	else if (identifier_string_match(SYM_T2))
-		return SYM_T2;
-	else if (identifier_string_match(SYM_S0))
-		return SYM_S0;
-	else if (identifier_string_match(SYM_S1))
-		return SYM_S1;
-	else if (identifier_string_match(SYM_A0))
-		return SYM_A0;
-	else if (identifier_string_match(SYM_A1))
-		return SYM_A1;
-	else if (identifier_string_match(SYM_A2))
-		return SYM_A2;
-	else if (identifier_string_match(SYM_A3))
-		return SYM_A3;
-	else if (identifier_string_match(SYM_A4))
-		return SYM_A4;
-	else if (identifier_string_match(SYM_A5))
-		return SYM_A5;
-	else if (identifier_string_match(SYM_A6))
-		return SYM_A6;
-	else if (identifier_string_match(SYM_A7))
-		return SYM_A7;
-	else if (identifier_string_match(SYM_S2))
-		return SYM_S2;
-	else if (identifier_string_match(SYM_S3))
-		return SYM_S3;
-	else if (identifier_string_match(SYM_S4))
-		return SYM_S4;
-	else if (identifier_string_match(SYM_S5))
-		return SYM_S5;
-	else if (identifier_string_match(SYM_S6))
-		return SYM_S6;
-	else if (identifier_string_match(SYM_S7))
-		return SYM_S7;
-	else if (identifier_string_match(SYM_S8))
-		return SYM_S8;
-	else if (identifier_string_match(SYM_S9))
-		return SYM_S9;
-	else if (identifier_string_match(SYM_S10))
-		return SYM_S10;
-	else if (identifier_string_match(SYM_S11))
-		return SYM_S11;
-	else if (identifier_string_match(SYM_T3))
-		return SYM_T3;
-	else if (identifier_string_match(SYM_T4))
-		return SYM_T4;
-	else if (identifier_string_match(SYM_T5))
-		return SYM_T5;
-	else if (identifier_string_match(SYM_T6))
-		return SYM_T6;
-	else 
-		exit(EXITCODE_SCANNERERROR);
-}
+
 
 // Assignment 1 - Assembler Parser - Michael Lenort
 // method is used to identify a RISCU assembly instruction. 
@@ -11279,6 +11229,77 @@ uint64_t is_instruction() {
 // just like is_instruction, used to identify a register.
 uint64_t is_register() {
 	if(identifier_string_match_register(REG_T0))
+    return 1;
+  else if(identifier_string_match_register(REG_T1))
+    return 1;
+  else if(identifier_string_match_register(REG_A0))
+    return 1;
+  else if(identifier_string_match_register(REG_A1))
+    return 1;
+  else if(identifier_string_match_register(REG_A2))
+    return 1;
+  else if(identifier_string_match_register(REG_A3))
+    return 1;
+  else if(identifier_string_match_register(REG_A4))
+    return 1;
+  else if(identifier_string_match_register(REG_A5))
+    return 1;
+  else if(identifier_string_match_register(REG_A6))
+    return 1;
+  else if(identifier_string_match_register(REG_A7))
+    return 1;
+  else if(identifier_string_match_register(REG_S1))
+    return 1;
+  else if(identifier_string_match_register(REG_S2))
+    return 1;
+  else if(identifier_string_match_register(REG_S3))
+    return 1;
+  else if(identifier_string_match_register(REG_S4))
+    return 1;
+  else if(identifier_string_match_register(REG_S5))
+    return 1;
+  else if(identifier_string_match_register(REG_S6))
+    return 1;
+  else if(identifier_string_match_register(REG_S7))
+    return 1;
+  else if(identifier_string_match_register(REG_S8))
+    return 1;
+  else if(identifier_string_match_register(REG_S9))
+    return 1;
+  else if(identifier_string_match_register(REG_S10))
+    return 1;
+  else if(identifier_string_match_register(REG_S11))
+    return 1;
+  else if(identifier_string_match_register(REG_T2))
+    return 1;
+  else if(identifier_string_match_register(REG_T3))
+    return 1;
+  else if(identifier_string_match_register(REG_T4))
+    return 1;
+  else if(identifier_string_match_register(REG_T5))
+    return 1;
+  else if(identifier_string_match_register(REG_T6))
+    return 1;
+  else if(identifier_string_match_register(REG_GP))
+    return 1;
+  else if(identifier_string_match_register(REG_SP))
+    return 1;
+  else if(identifier_string_match_register(REG_TP))
+    return 1;
+  else if(identifier_string_match_register(REG_RA))
+    return 1;
+  else if(identifier_string_match_register(REG_ZR))
+    return 1;  
+  else if(identifier_string_match_register(REG_S0))
+    return 1;
+  else
+    return 0;
+}
+
+// Assignment 1 - Assembler Parser - Michael Lenort
+// just like is_instruction, used to identify a register.
+uint64_t get_register() {
+	if(identifier_string_match_register(REG_T0))
     return REG_T0;
   else if(identifier_string_match_register(REG_T1))
     return REG_T1;
@@ -11336,12 +11357,12 @@ uint64_t is_register() {
     return REG_SP;
   else if(identifier_string_match_register(REG_TP))
     return REG_TP;
-  else if(identifier_string_match_register(REG_ZR))
-    return 1;
   else if(identifier_string_match_register(REG_RA))
-    return 1;
+    return REG_RA;
   else if(identifier_string_match_register(REG_S0))
-    return 1;
+    return REG_S0;
+  else if(identifier_string_match_register(REG_ZR))
+    return REG_ZR;
   else
     return 0;
 }
