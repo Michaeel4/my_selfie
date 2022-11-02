@@ -4903,7 +4903,7 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
 
     printf("beq is");
     printf("emitting beq instruction");
-    emit_beq(rd, r1, imm);
+    emit_beq(rd, r1, (imm * INSTRUCTIONSIZE));
     printf("succesfully emitted instruction");
     
   }
@@ -5143,16 +5143,22 @@ void compile_assembly(){
                get_symbol();
 
                 
-                printf("%lu", literal);
+                //printf("%lu", literal);
 
 
-      
-
+              
+                //printf("char is minus");
                 
                
-                value = read_literal_value();
+                //value = read_literal_value();
 
-                emit_jal(r1, -value);
+                //printf("value is");
+
+                //printf("%lu", value);
+
+                
+
+                emit_jal(r1, (-1 * literal * INSTRUCTIONSIZE));
               } else if(is_character_letter_or_digit_or_underscore()){
                 get_symbol();
                 printf("%lu", literal);
