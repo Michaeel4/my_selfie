@@ -541,6 +541,9 @@ uint64_t is_register();
 uint64_t is_instruction();
 uint64_t get_instruction();
 
+
+uint64_t read_literal_value();
+
 uint64_t get_register();
 // Assignment 2 - Self Assembler - Michael Lenort
 
@@ -5137,20 +5140,23 @@ void compile_assembly(){
                get_symbol();
                get_symbol();
 
-
+                
                 printf("%lu", literal);
 
 
-                value = -literal;
+      
 
+                
+               
+                value = read_literal_value();
 
-                emit_jal(r1, value);
+                emit_jal(r1, -value);
               } else if(is_character_letter_or_digit_or_underscore()){
                 get_symbol();
                 printf("%lu", literal);
 
 
-                emit_jal(r1, literal);
+                emit_jal(r1, (literal*INSTRUCTIONSIZE));
               }
             }
           } else {
@@ -11183,6 +11189,38 @@ uint64_t is_hexar(){
     return 1;
   else
     return 0;
+}
+
+uint64_t read_literal_value(){
+
+      //                // accommodate integer and null for termination
+			// integer = string_alloc(MAX_INTEGER_LENGTH);
+      
+			// uint64_t i;
+
+			// while (is_character_letter_or_digit_or_underscore()) {
+			//   if (i >= MAX_INTEGER_LENGTH) {
+			// 	if (integer_is_signed)
+			// 	  syntax_error_message("signed integer out of bound");
+			// 	else
+			// 	  syntax_error_message("integer out of bound");
+
+			// 	exit(EXITCODE_SCANNERERROR);
+			//   }
+			//   store_character(integer, i, character);
+
+			//   i = i + 1;
+
+
+			//   get_character();
+			// }
+
+			// store_character(integer, i, 0); // null-terminated string
+
+			// literal = hexar_magic(integer);
+
+
+      return 0;
 }
 
 // Assignment 1 - Assembler Parser - Michael Lenort
