@@ -4970,6 +4970,8 @@ void compile_assembly(){
       if(character == CHAR_ZERO){
         get_character();
         if(character == CHAR_X){
+
+          get_character();
           integer = string_alloc(MAX_INTEGER_LENGTH);
 
 			i = 0;
@@ -4994,9 +4996,11 @@ void compile_assembly(){
 
 			store_character(integer, i, 0); // null-terminated string
 
-      value = hexar_magic(integer);
+      literal = hexar_magic(integer);
+      printf("value hexar is");
+      printf("%lu", literal);
 
-      store_data(data_size, value);
+      store_data(data_size, literal);
       data_size = data_size + WORDSIZE;
 
       }
@@ -7176,36 +7180,41 @@ uint64_t is_lui_instruction();
 // identical to selfie_compile except that it calls compile_assembly() instead of compile_cstar.
 void selfie_compile_assembly() {
   source_name = get_argument();
+  source_fd = open_read_only(source_name);
+  binary_name = source_name;
 
-  // assert: assembly_name is mapped and not longer than MAX_FILENAME_LENGTH
 
-  source_fd = sign_extend(open(source_name, O_RDONLY, 0), SYSCALL_BITWIDTH);
+  reset_binary();
 
+  //source_fd = sign_extend(open(source_name, O_RDONLY, 0), SYSCALL_BITWIDTH);
   if (signed_less_than(source_fd, 0)) {
-    printf("%s: could not open assembly input file %s\n", selfie_name, source_name);
+    printf("%s: could not open input file %s\n", selfie_name, source_name);
 
     exit(EXITCODE_IOERROR);
   }
 
-   // allocate zeroed memory for storing binary
   code_binary = zmalloc(MAX_CODE_SIZE);
   data_binary = zmalloc(MAX_DATA_SIZE);
-
+  
   // allocate zeroed memory for storing source code line numbers
   code_line_number = zmalloc(MAX_CODE_SIZE / INSTRUCTIONSIZE * SIZEOFUINT64);
   data_line_number = zmalloc(MAX_DATA_SIZE / WORDSIZE * SIZEOFUINT64);
+
+  reset_instruction_counters();
   reset_scanner();
   get_symbol();
-  while(symbol != SYM_EOF) {
+
+  while(symbol != SYM_EOF)
     compile_assembly();
-	
-  }	
-   ELF_header = encode_elf_header();
-  //ELF_header = create_elf_header(binary_length, code_length);
-  
-  //entry_point = ELF_ENTRY_POINT;
+
+  //emit_bootstrapping();
+  code_start = PK_CODE_START;
+  data_start = round_up(code_start+code_size, p_align);
+  ELF_header = encode_elf_header();
+
+  validate_elf_header(ELF_header);
 }
-  
+
 
 void selfie_compile() {
   uint64_t link;
