@@ -541,6 +541,10 @@ uint64_t is_register();
 uint64_t is_instruction();
 uint64_t get_instruction();
 
+
+uint64_t read_literal_value();
+
+uint64_t get_register();
 // Assignment 2 - Self Assembler - Michael Lenort
 
 void emit_instructions(uint64_t instruct, uint64_t r1, uint64_t r2, uint64_t imm);
@@ -4205,6 +4209,21 @@ void get_symbol() {
           get_character();
         }
       }
+
+      else if(character == 'z'){
+
+        get_character();
+
+        if(character == 'e'){
+
+          get_character();
+
+          if(character == 'r'){
+
+            symbol = SYM_ZERO;
+          }
+        }
+      }
       
        else if (character == CHAR_DOT) {
         get_character();
@@ -4851,6 +4870,7 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
   } else if (instruct == SYM_ADDI){
     printf("emitting addi instruction");
     emit_addi(rd, r1, imm);
+    return;
     printf("succesfully emitted instruction");
   }
   else if (instruct == SYM_SUB){
@@ -4883,7 +4903,7 @@ void emit_instructions(uint64_t instruct, uint64_t rd, uint64_t r1, uint64_t imm
 
     printf("beq is");
     printf("emitting beq instruction");
-    emit_beq(rd, r1, imm);
+    emit_beq(rd, r1, (imm * INSTRUCTIONSIZE));
     printf("succesfully emitted instruction");
     
   }
@@ -4938,6 +4958,9 @@ void compile_assembly(){
   // As long as EOF isn't reached, read further.
   while (symbol != SYM_EOF) {
 
+
+
+  
   // .8byte case writing to memory
   // Symbol 81 => SYM_8BYTE
   // If the scanner identifies .8b sequence, we assume its a ".8byte" decleration.
@@ -4947,6 +4970,8 @@ void compile_assembly(){
       if(character == CHAR_ZERO){
         get_character();
         if(character == CHAR_X){
+
+          get_character();
           integer = string_alloc(MAX_INTEGER_LENGTH);
 
 			i = 0;
@@ -4971,9 +4996,11 @@ void compile_assembly(){
 
 			store_character(integer, i, 0); // null-terminated string
 
-      value = hexar_magic(integer);
+      literal = hexar_magic(integer);
+      printf("value hexar is");
+      printf("%lu", literal);
 
-      store_data(data_size, value);
+      store_data(data_size, literal);
       data_size = data_size + WORDSIZE;
 
       }
@@ -4991,7 +5018,6 @@ void compile_assembly(){
 
   } else if(is_lui_instruction()){
 
-
     // LUI case 
     // Load upper immediate - we must identify LUI cases, because LUI must have an immediate value
     // as the last argument unlike other instructions, which allow the access to registers as well.
@@ -5001,7 +5027,7 @@ void compile_assembly(){
       if(is_register()){
 
 
-        r1 = is_register();
+        r1 = get_register();
         get_symbol();
         //printf("is register ");
 
@@ -5014,23 +5040,24 @@ void compile_assembly(){
             if(character == 'x'){
 
               //printf("is hexar!!");
-                              get_character();
 
               // while(is_character_letter_or_digit_or_underscore()){
               //   value = hexar_magic(&character);
 
-              get_character();
                 
               //   get_character();
               // }
 
               // accommodate integer and null for termination
-			integer = string_alloc(MAX_INTEGER_LENGTH);
+
+
+              get_character();
+			integer = string_alloc(MAX_STRING_LENGTH);
 
 			i = 0;
 
 			while (is_character_letter_or_digit_or_underscore()) {
-			  if (i >= MAX_INTEGER_LENGTH) {
+			  if (i >= MAX_STRING_LENGTH) {
 				if (integer_is_signed)
 				  syntax_error_message("signed integer out of bound");
 				else
@@ -5042,19 +5069,23 @@ void compile_assembly(){
 
 			  i = i + 1;
 
+        printf("%c", character);
 			  get_character();
+
 			}
 
 			store_character(integer, i, 0); // null-terminated string
 
 			literal = hexar_magic(integer);
 
-          value = symbol;
+      //printf("%lu", literal);
 
-          emit_lui(r1, value);
+          emit_lui(r1, sign_extend(literal,20));
+          print_lui();
+
             }
           
-            printf("%lu", literal);
+            //printf("%lu", literal);
             //return;
           }
           
@@ -5078,11 +5109,12 @@ void compile_assembly(){
           emit_nop();
           get_symbol();
 
-       }
+       
 
+  
     
     // ALU / L | S Instructions Cases
-    else if (is_instruction()){
+    } else if (is_instruction()){
       
       // set instruction to 79 => SYM_ADDI to identify addi instruction later when we parse further down.
       if(is_addi_instruction()){
@@ -5101,7 +5133,7 @@ void compile_assembly(){
           get_symbol();
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
 
             //printf("got jal register");
             get_symbol();
@@ -5114,54 +5146,45 @@ void compile_assembly(){
                get_symbol();
                get_symbol();
 
-
-                printf("%lu", literal);
-
-
-                value = -literal;
+                
+                //printf("%lu", literal);
 
 
-                emit_jal(r1, value);
+              
+                //printf("char is minus");
+                
+               
+                //value = read_literal_value();
+
+                //printf("value is");
+
+                //printf("%lu", value);
+
+                
+
+                emit_jal(r1, (-1 * literal * INSTRUCTIONSIZE));
               } else if(is_character_letter_or_digit_or_underscore()){
                 get_symbol();
                 printf("%lu", literal);
 
 
-                emit_jal(r1, literal);
+                emit_jal(r1, (literal*INSTRUCTIONSIZE));
               }
-
-                    
-
-                 
-
-            
-
-             
             }
           } else {
-
             syntax_error_expected_symbol(SYM_ADD);
           }
         }
-
         else if(identifier_string_match(SYM_JALR)){
-          
-
-
 
           get_symbol();
 
           if(is_register()){
-            r1 = is_register();
+            r1 = get_register();
 
             get_symbol();
-
             
             if(symbol == SYM_COMMA){
-
-
-                 
-
 
                   get_symbol();
                   value = literal;
@@ -5178,7 +5201,6 @@ void compile_assembly(){
 
 
                     }
-
                   }
             }
           }
@@ -5190,7 +5212,7 @@ void compile_assembly(){
 
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               get_symbol();
@@ -5212,13 +5234,13 @@ void compile_assembly(){
                     if(is_register()){
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
                       
                       printf("\n %lu", is_register());
                       printf("FOUND NEGATIVE REGISTER");
 
-                       emit_store(r1, value, r2);
+                       emit_store(r2, value, r1);
                     }
 
                     // if(character == 's'){
@@ -5251,13 +5273,13 @@ void compile_assembly(){
                     if(is_register()){
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
                       
                       printf("\n %lu", is_register());
                       printf("FOUND NEGATIVE REGISTER");
 
-                       emit_store(r1, value, r2);
+                       emit_store(r2, value, r1);
                     }
 
                }
@@ -5273,7 +5295,7 @@ void compile_assembly(){
 
           if(is_register()){
 
-            r1 = is_register();
+            r1 = get_register();
             get_symbol();
             if(symbol == SYM_COMMA){
               
@@ -5300,7 +5322,7 @@ void compile_assembly(){
 
                       if(is_register()){
 
-                        r2 = is_register();
+                        r2 = get_register();
 
 
                         emit_load(r1, r2, value);
@@ -5352,7 +5374,7 @@ void compile_assembly(){
 
                       
 
-                      r2 = is_register();
+                      r2 = get_register();
 
 
                       printf("found register!");
@@ -5399,7 +5421,7 @@ void compile_assembly(){
 
       // get the first register
       if(is_register()){
-        r1 = is_register();
+        r1 = get_register();
         get_symbol();
         printf(" first register detected");
 
@@ -5410,7 +5432,7 @@ void compile_assembly(){
 
           // get the second register
           if(is_register()){
-            r2 = is_register();
+            r2 = get_register();
             get_symbol();
             //printf("second register detected");
             // get the second comma
@@ -5428,8 +5450,10 @@ void compile_assembly(){
 
                 printf("FOUND MINUS!");
 
+                value = -literal;
 
-                emit_instructions(instruction, r1, r2, -literal);
+
+                emit_instructions(instruction, r1, r2, value);
               }           
 
               get_symbol();
@@ -5439,11 +5463,11 @@ void compile_assembly(){
             
               // or "zero"
             if(identifier_string_match(SYM_ZERO)){
-                printf(" value detected");
 if(instruction == 79){
                     ld_counter = ld_counter + 1;
                   }
-                emit_instructions(instruction, r1, r2, REG_ZR);
+                
+                emit_instructions(instruction, r1, r2, literal);
 
              
                 get_symbol();
@@ -5462,17 +5486,15 @@ if(instruction == 79){
               // or a register 
               else if(is_register()){
 
-                value = is_register();
+                value = get_register();
                 // if addi reject register as we need a literal.
                 if(instruction == 79){
-                  printf("instruction addi detected");
                   syntax_error_expected_symbol(SYM_INTEGER);
                   return;
                 }
                
                 emit_instructions(instruction, r1, r2, value);                                                                            
 
-                printf("is register");
                 get_symbol();
               } 
             } else {
@@ -5491,8 +5513,8 @@ if(instruction == 79){
       return;
     }
   }
-  
-  }
+}
+
 
 uint64_t compile_type() {
   uint64_t type;
@@ -7157,152 +7179,42 @@ uint64_t is_lui_instruction();
 // is called whenever -a flag is set when running selfie. 
 // identical to selfie_compile except that it calls compile_assembly() instead of compile_cstar.
 void selfie_compile_assembly() {
-  uint64_t link;
-  uint64_t number_of_source_files;
-  uint64_t fetch_dss_code_location;
-
-  fetch_dss_code_location = 0;
-
-  // link until next console option
-  link = 1;
-
-  number_of_source_files = 0;
-
-  source_name = "library";
-
+  source_name = get_argument();
+  source_fd = open_read_only(source_name);
   binary_name = source_name;
+
 
   reset_binary();
 
-  // allocate zeroed memory for storing binary
+  //source_fd = sign_extend(open(source_name, O_RDONLY, 0), SYSCALL_BITWIDTH);
+  if (signed_less_than(source_fd, 0)) {
+    printf("%s: could not open input file %s\n", selfie_name, source_name);
+
+    exit(EXITCODE_IOERROR);
+  }
+
   code_binary = zmalloc(MAX_CODE_SIZE);
   data_binary = zmalloc(MAX_DATA_SIZE);
-
+  
   // allocate zeroed memory for storing source code line numbers
   code_line_number = zmalloc(MAX_CODE_SIZE / INSTRUCTIONSIZE * SIZEOFUINT64);
   data_line_number = zmalloc(MAX_DATA_SIZE / WORDSIZE * SIZEOFUINT64);
 
-  reset_symbol_tables();
   reset_instruction_counters();
+  reset_scanner();
+  get_symbol();
 
-  emit_program_entry();
+  while(symbol != SYM_EOF)
+    compile_assembly();
 
-  // emit system call wrappers
-  // exit code must be first
-  emit_exit();
-  emit_read();
-  emit_write();
-  emit_open();
-
-  emit_malloc();
-
-  emit_switch();
-
-  if (GC_ON) {
-    emit_fetch_stack_pointer();
-    emit_fetch_global_pointer();
-
-    // save code location of eventual fetch_data_segment_size implementation
-    fetch_dss_code_location = code_size;
-
-    emit_fetch_data_segment_size_interface();
-  }
-
-  // declare macros in library symbol table to override entries in global symbol table
-  create_symbol_table_entry(LIBRARY_TABLE, "var_start", 0, MACRO, VOID_T, 1, 0);
-  create_symbol_table_entry(LIBRARY_TABLE, "var_arg", 0, MACRO, UINT64_T, 1, 0);
-  create_symbol_table_entry(LIBRARY_TABLE, "var_end", 0, MACRO, VOID_T, 1, 0);
-
-  // declare main procedure in global symbol table
-  // use main_name string to obtain unique hash
-  create_symbol_table_entry(GLOBAL_TABLE, main_name, 0, PROCEDURE, UINT64_T, 0, 0);
-
-  while (link) {
-    if (number_of_remaining_arguments() == 0)
-      link = 0;
-    else if (load_character(peek_argument(0), 0) == '-')
-      link = 0;
-    else {
-      source_name = get_argument();
-
-      number_of_source_files = number_of_source_files + 1;
-
-      printf("%s: selfie compiling %s to %lu-bit RISC-U with %lu-bit starc\n", selfie_name,
-        source_name, WORDSIZEINBITS, SIZEOFUINT64INBITS);
-
-      // assert: source_name is mapped and not longer than MAX_FILENAME_LENGTH
-
-      source_fd = open_read_only(source_name);
-
-      if (signed_less_than(source_fd, 0)) {
-        printf("%s: could not open input file %s\n", selfie_name, source_name);
-
-        exit(EXITCODE_IOERROR);
-      }
-
-      reset_scanner();
-      reset_parser();
-
-      //compile_cstar();
-
-      compile_assembly();
-
-      printf("%s: %lu characters read in %lu lines and %lu comments\n", selfie_name,
-        number_of_read_characters,
-        line_number,
-        number_of_comments);
-
-      printf("%s: with %lu(%lu.%.2lu%%) characters in %lu actual symbols\n", selfie_name,
-        number_of_read_characters - number_of_ignored_characters,
-        percentage_format_integral_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
-        percentage_format_fractional_2(number_of_read_characters, number_of_read_characters - number_of_ignored_characters),
-        number_of_scanned_symbols);
-
-      printf("%s: %lu global variables, %lu procedures, %lu string literals\n", selfie_name,
-        number_of_global_variables,
-        number_of_procedures,
-        number_of_strings);
-
-      printf("%s: %lu calls, %lu assignments, %lu while, %lu if, %lu return\n", selfie_name,
-        number_of_calls,
-        number_of_assignments,
-        number_of_while,
-        number_of_if,
-        number_of_return);
-
-      if (number_of_syntax_errors != 0) {
-        printf("%s: encountered %lu syntax errors while compiling %s - omitting output\n",
-          selfie_name,
-          number_of_syntax_errors,
-          source_name);
-        exit(EXITCODE_SYNTAXERROR);
-      }
-    }
-  }
-
-  if (number_of_source_files == 0)
-    printf("%s: nothing to compile, only library generated\n", selfie_name);
-
-  emit_bootstrapping();
-
-  if (GC_ON)
-    emit_fetch_data_segment_size_implementation(fetch_dss_code_location);
-
-  emit_data_segment();
-
+  //emit_bootstrapping();
+  code_start = PK_CODE_START;
+  data_start = round_up(code_start+code_size, p_align);
   ELF_header = encode_elf_header();
 
-  printf("%s: symbol table search time was %lu iterations on average and %lu in total\n", selfie_name,
-    total_search_time / number_of_searches,
-    total_search_time);
-
-  printf("%s: %lu bytes generated with %lu instructions and %lu bytes of data\n", selfie_name,
-    code_size + data_size,
-    code_size / INSTRUCTIONSIZE,
-    data_size);
-
-  print_instruction_counters();
+  validate_elf_header(ELF_header);
 }
+
 
 void selfie_compile() {
   uint64_t link;
@@ -11126,74 +11038,7 @@ uint64_t get_instruction() {
 	exit(EXITCODE_SCANNERERROR);
 }
 
-uint64_t get_register() {
-	if (identifier_string_match(REG_ZR))
-		return REG_ZR;
-	else if (identifier_string_match(SYM_RA))
-		return SYM_RA;
-	else if (identifier_string_match(SYM_SP))
-		return SYM_SP;
-	else if (identifier_string_match(SYM_GP))
-		return SYM_GP;
-	else if (identifier_string_match(SYM_TP))
-		return SYM_TP;
-	else if (identifier_string_match(SYM_T0))
-		return SYM_T0;
-	else if (identifier_string_match(SYM_T1))
-		return SYM_T1;
-	else if (identifier_string_match(SYM_T2))
-		return SYM_T2;
-	else if (identifier_string_match(SYM_S0))
-		return SYM_S0;
-	else if (identifier_string_match(SYM_S1))
-		return SYM_S1;
-	else if (identifier_string_match(SYM_A0))
-		return SYM_A0;
-	else if (identifier_string_match(SYM_A1))
-		return SYM_A1;
-	else if (identifier_string_match(SYM_A2))
-		return SYM_A2;
-	else if (identifier_string_match(SYM_A3))
-		return SYM_A3;
-	else if (identifier_string_match(SYM_A4))
-		return SYM_A4;
-	else if (identifier_string_match(SYM_A5))
-		return SYM_A5;
-	else if (identifier_string_match(SYM_A6))
-		return SYM_A6;
-	else if (identifier_string_match(SYM_A7))
-		return SYM_A7;
-	else if (identifier_string_match(SYM_S2))
-		return SYM_S2;
-	else if (identifier_string_match(SYM_S3))
-		return SYM_S3;
-	else if (identifier_string_match(SYM_S4))
-		return SYM_S4;
-	else if (identifier_string_match(SYM_S5))
-		return SYM_S5;
-	else if (identifier_string_match(SYM_S6))
-		return SYM_S6;
-	else if (identifier_string_match(SYM_S7))
-		return SYM_S7;
-	else if (identifier_string_match(SYM_S8))
-		return SYM_S8;
-	else if (identifier_string_match(SYM_S9))
-		return SYM_S9;
-	else if (identifier_string_match(SYM_S10))
-		return SYM_S10;
-	else if (identifier_string_match(SYM_S11))
-		return SYM_S11;
-	else if (identifier_string_match(SYM_T3))
-		return SYM_T3;
-	else if (identifier_string_match(SYM_T4))
-		return SYM_T4;
-	else if (identifier_string_match(SYM_T5))
-		return SYM_T5;
-	else if (identifier_string_match(SYM_T6))
-		return SYM_T6;
-	else 
-		exit(EXITCODE_SCANNERERROR);
-}
+
 
 // Assignment 1 - Assembler Parser - Michael Lenort
 // method is used to identify a RISCU assembly instruction. 
@@ -11363,6 +11208,38 @@ uint64_t is_hexar(){
     return 0;
 }
 
+uint64_t read_literal_value(){
+
+      //                // accommodate integer and null for termination
+			// integer = string_alloc(MAX_INTEGER_LENGTH);
+      
+			// uint64_t i;
+
+			// while (is_character_letter_or_digit_or_underscore()) {
+			//   if (i >= MAX_INTEGER_LENGTH) {
+			// 	if (integer_is_signed)
+			// 	  syntax_error_message("signed integer out of bound");
+			// 	else
+			// 	  syntax_error_message("integer out of bound");
+
+			// 	exit(EXITCODE_SCANNERERROR);
+			//   }
+			//   store_character(integer, i, character);
+
+			//   i = i + 1;
+
+
+			//   get_character();
+			// }
+
+			// store_character(integer, i, 0); // null-terminated string
+
+			// literal = hexar_magic(integer);
+
+
+      return 0;
+}
+
 // Assignment 1 - Assembler Parser - Michael Lenort
 // Simple boolean function to determine whetever the symbol is definied in the MNEMONICS or not. 
 
@@ -11406,6 +11283,77 @@ uint64_t is_instruction() {
 // Assignment 1 - Assembler Parser - Michael Lenort
 // just like is_instruction, used to identify a register.
 uint64_t is_register() {
+	if(identifier_string_match_register(REG_T0))
+    return 1;
+  else if(identifier_string_match_register(REG_T1))
+    return 1;
+  else if(identifier_string_match_register(REG_A0))
+    return 1;
+  else if(identifier_string_match_register(REG_A1))
+    return 1;
+  else if(identifier_string_match_register(REG_A2))
+    return 1;
+  else if(identifier_string_match_register(REG_A3))
+    return 1;
+  else if(identifier_string_match_register(REG_A4))
+    return 1;
+  else if(identifier_string_match_register(REG_A5))
+    return 1;
+  else if(identifier_string_match_register(REG_A6))
+    return 1;
+  else if(identifier_string_match_register(REG_A7))
+    return 1;
+  else if(identifier_string_match_register(REG_S1))
+    return 1;
+  else if(identifier_string_match_register(REG_S2))
+    return 1;
+  else if(identifier_string_match_register(REG_S3))
+    return 1;
+  else if(identifier_string_match_register(REG_S4))
+    return 1;
+  else if(identifier_string_match_register(REG_S5))
+    return 1;
+  else if(identifier_string_match_register(REG_S6))
+    return 1;
+  else if(identifier_string_match_register(REG_S7))
+    return 1;
+  else if(identifier_string_match_register(REG_S8))
+    return 1;
+  else if(identifier_string_match_register(REG_S9))
+    return 1;
+  else if(identifier_string_match_register(REG_S10))
+    return 1;
+  else if(identifier_string_match_register(REG_S11))
+    return 1;
+  else if(identifier_string_match_register(REG_T2))
+    return 1;
+  else if(identifier_string_match_register(REG_T3))
+    return 1;
+  else if(identifier_string_match_register(REG_T4))
+    return 1;
+  else if(identifier_string_match_register(REG_T5))
+    return 1;
+  else if(identifier_string_match_register(REG_T6))
+    return 1;
+  else if(identifier_string_match_register(REG_GP))
+    return 1;
+  else if(identifier_string_match_register(REG_SP))
+    return 1;
+  else if(identifier_string_match_register(REG_TP))
+    return 1;
+  else if(identifier_string_match_register(REG_RA))
+    return 1;
+  else if(identifier_string_match_register(REG_ZR))
+    return 1;  
+  else if(identifier_string_match_register(REG_S0))
+    return 1;
+  else
+    return 0;
+}
+
+// Assignment 1 - Assembler Parser - Michael Lenort
+// just like is_instruction, used to identify a register.
+uint64_t get_register() {
 	if(identifier_string_match_register(REG_T0))
     return REG_T0;
   else if(identifier_string_match_register(REG_T1))
@@ -11464,12 +11412,12 @@ uint64_t is_register() {
     return REG_SP;
   else if(identifier_string_match_register(REG_TP))
     return REG_TP;
-  else if(identifier_string_match_register(REG_ZR))
-    return 1;
   else if(identifier_string_match_register(REG_RA))
-    return 1;
+    return REG_RA;
   else if(identifier_string_match_register(REG_S0))
-    return 1;
+    return REG_S0;
+  else if(identifier_string_match_register(REG_ZR))
+    return REG_ZR;
   else
     return 0;
 }
