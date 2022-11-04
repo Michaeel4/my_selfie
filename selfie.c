@@ -541,6 +541,11 @@ uint64_t is_register();
 uint64_t is_instruction();
 uint64_t get_instruction();
 
+// Assignment 3 - Processes - Michael Lenort
+// we need to call a function that runs multiple processes at the same time.
+// probably must have some kind of arguments that can be parsed down to
+// inherit things. 
+
 
 uint64_t read_literal_value();
 
@@ -2528,6 +2533,14 @@ char* replace_extension(char* filename, char* extension);
 void boot_loader(uint64_t* context);
 
 uint64_t selfie_run(uint64_t machine);
+
+// Assignment3 - Processes - Michael Lenort
+// like selfie_run, we probably need to call something like selfie_run_mipster whatever
+// and pass down the processes value that will be then used to inherit several
+// mipsterOS / hypsterOS at the same time.
+
+uint64_t selfie_run_mipsterOS(uint64_t machine, char *processes);
+
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -13146,6 +13159,15 @@ void boot_loader(uint64_t* context) {
   up_load_arguments(context, number_of_remaining_arguments(), remaining_arguments());
 }
 
+uint64_t selfie_run_mipsterOS(uint64_t machine, char *processes){
+    printf("%lu", machine);
+
+    printf("%s", processes);
+    printf("you called the famous mipsterOS flag");
+
+    return 0;
+}
+
 uint64_t selfie_run(uint64_t machine) {
   uint64_t exit_code;
 
@@ -13292,6 +13314,10 @@ uint64_t no_or_bad_or_more_arguments(uint64_t exit_code) {
 }
 // Assignment 1 - Assembler Parser - Michael Lenort
 // add -a flag to possible arguments so that we can compile .s files. 
+
+// Assignment 3 - Processes - Michael Lenort
+// Add -x flag to declare multiple processes for the mipsterOS
+// and also -z flag for the hypsterOS process. 
 void print_synopsis(char* extras) {
   printf("synopsis: %s { -c { source } | -o binary | -a RISCU | ( -s | -S ) assembly | -l binary }%s\n", selfie_name, extras);
 }
@@ -13343,6 +13369,10 @@ uint64_t selfie(uint64_t extras) {
       else if (extras == 0) {
         if (string_compare(argument, "-m"))
           return selfie_run(MIPSTER);
+        else if (string_compare(argument, "-x")) // Assignment 3 - Processes - Michael Lenort 
+          return selfie_run_mipsterOS(MIPSTER, argument);  // used to call the function when flags are passed
+        // else if(string_compare(argument, "-z"))
+        //   return selfie_run_hypsterOS(HYPSTER);
         else if (string_compare(argument, "-d"))
           return selfie_run(DIPSTER);
         else if (string_compare(argument, "-r"))
