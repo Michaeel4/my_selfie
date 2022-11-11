@@ -667,7 +667,7 @@ void init_scanner () {
   *(SYMBOLS + SYM_LUI)      = (uint64_t) "lui";
   *(SYMBOLS + SYM_GP)      = (uint64_t) "gp";
   *(SYMBOLS + SYM_SD)      = (uint64_t) "sd";
-  *(SYMBOLS + SYM_8BYTE)      = (uint64_t) ".8byte"; // <- For .8byte, we must change the scanner to identify this keyword.
+  *(SYMBOLS + SYM_8BYTE)      = (uint64_t) ".8byte"; 
   *(SYMBOLS + SYM_NOP)      = (uint64_t) "nop";
   *(SYMBOLS + SYM_HEXAR)      = (uint64_t) "0x";
 
@@ -13160,10 +13160,50 @@ void boot_loader(uint64_t* context) {
 }
 
 uint64_t selfie_run_mipsterOS(uint64_t machine, char *processes){
+
+
+  uint64_t exit_code;
     printf("%lu", machine);
 
     printf("%s", processes);
     printf("you called the famous mipsterOS flag");
+
+    // Assignment 3 - Processes - Michael Lenort
+    // notes: probably a good idea to take a look at how mipster is usally ineherited
+    // and then take this to start the mipster OS processes bassed on the amount of chars we got.
+    
+   if (code_size == 0) {
+    printf("%s: nothing to run, debug, or host\n", selfie_name);
+    return EXITCODE_BADARGUMENTS;
+
+   }
+
+   reset_interpreter();
+  reset_profiler();
+  reset_microkernel();
+
+  //init_memory(atoi(peek_argument(0)));
+
+  current_context = create_context(MY_CONTEXT, 0);
+
+  // assert: number_of_remaining_arguments() > 0
+
+  //boot_loader(current_context);
+
+  // current_context is ready to run
+
+  run = 1;
+
+
+   if(machine == MIPSTER){
+    printf("machine mipster called!");
+   }
+
+  
+
+  return exit_code;
+
+
 
     return 0;
 }
@@ -13370,7 +13410,7 @@ uint64_t selfie(uint64_t extras) {
         if (string_compare(argument, "-m"))
           return selfie_run(MIPSTER);
         else if (string_compare(argument, "-x")) // Assignment 3 - Processes - Michael Lenort 
-          return selfie_run_mipsterOS(MIPSTER, argument);  // used to call the function when flags are passed
+          return selfie_run_mipsterOS(MIPSTER, get_argument());  // used to call the function when flags are passed
         // else if(string_compare(argument, "-z"))
         //   return selfie_run_hypsterOS(HYPSTER);
         else if (string_compare(argument, "-d"))
