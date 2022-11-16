@@ -13230,6 +13230,9 @@ uint64_t selfie_run_mipsterOS(uint64_t machine){
    while(processes > 1){
 
     printf("HELLO WORLD");
+    current_context = create_context(MY_CONTEXT, 0);
+    boot_loader(current_context);
+    
     processes = processes - 1;
     
   }
