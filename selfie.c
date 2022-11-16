@@ -2539,7 +2539,7 @@ uint64_t selfie_run(uint64_t machine);
 // and pass down the processes value that will be then used to inherit several
 // mipsterOS / hypsterOS at the same time.
 
-uint64_t selfie_run_mipsterOS(uint64_t machine, char *processes);
+uint64_t selfie_run_mipsterOS(uint64_t machine);
 
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
@@ -13159,53 +13159,136 @@ void boot_loader(uint64_t* context) {
   up_load_arguments(context, number_of_remaining_arguments(), remaining_arguments());
 }
 
-uint64_t selfie_run_mipsterOS(uint64_t machine, char *processes){
+// Assignment 3 - Processes - Michael Lenort
+// similiar to selfie_run i could try to parse down the amount of processes after the -x flag
+// the argument should be in get_argument and then its probably useful to somehow use a while loop
+
+uint64_t selfie_run_mipsterOS(uint64_t machine){
 
 
-  uint64_t exit_code;
+    uint64_t exit_code;
+    uint64_t processes;
     printf("%lu", machine);
 
-    printf("%s", processes);
     printf("you called the famous mipsterOS flag");
 
     // Assignment 3 - Processes - Michael Lenort
     // notes: probably a good idea to take a look at how mipster is usally ineherited
     // and then take this to start the mipster OS processes bassed on the amount of chars we got.
     
-   if (code_size == 0) {
+
+  if (code_size == 0) {
     printf("%s: nothing to run, debug, or host\n", selfie_name);
+
     return EXITCODE_BADARGUMENTS;
+  } else if (machine == HYPSTER) {
+    if (OS != SELFIE) {
+      printf("%s: hypster only runs on mipster\n", selfie_name);
 
-   }
+      return EXITCODE_BADARGUMENTS;
+    }
+  }
 
-   reset_interpreter();
+  if (machine == CAPSTER) {
+    init_all_caches();
+
+    L1_CACHE_ENABLED = 1;
+
+    machine = MIPSTER;
+  }
+
+  reset_interpreter();
   reset_profiler();
   reset_microkernel();
+  
 
-  //init_memory(atoi(peek_argument(0)));
+  processes = atoi(peek_argument(0));
+
+
+
+
+  //Personal Notes - Michael Lenort
+  // setting the uin64_t variable equal to the atoi conversion of the argument one a head seems to be working
+
+  init_memory(atoi(peek_argument(0)));
+
 
   current_context = create_context(MY_CONTEXT, 0);
 
+
+
+
+  
   // assert: number_of_remaining_arguments() > 0
 
-  //boot_loader(current_context);
+  boot_loader(current_context);
+  
+
+  // Personal Notes - Michael Lenort
+  // works as well, loops trough the amount of integer value we set after the x flag
+  // now we need to create somehow a new context for each new iteration. 
+   while(processes > 1){
+
+    printf("HELLO WORLD");
+    processes = processes - 1;
+    
+  }
+
 
   // current_context is ready to run
 
   run = 1;
 
+  printf("%s: selfie executing %lu-bit RISC-U binary %s with %luMB physical memory", selfie_name,
+    WORDSIZEINBITS,
+    binary_name,
+    PHYSICALMEMORYSIZE / MEGABYTE);
 
-   if(machine == MIPSTER){
-    printf("machine mipster called!");
-   }
+  if (GC_ON) {
+    gc_init(current_context);
+
+    printf(", gcing every %lu mallocs, ", GC_PERIOD);
+    if (GC_REUSE) printf("reusing memory"); else printf("not reusing memory");
+  }
+
+  if (machine == DIPSTER) {
+    debug          = 1;
+    debug_syscalls = 1;
+    printf(", debugger");
+    machine = MIPSTER;
+  } else if (machine == RIPSTER) {
+    debug  = 1;
+    record = 1;
+    init_replay_engine();
+    printf(", replay");
+    machine = MIPSTER;
+  }
+
+  printf(" on %lu-bit ", SIZEOFUINT64INBITS);
 
   
+  exit_code = hypster(current_context);
+  
+  record = 0;
+
+  debug_syscalls = 0;
+  debug          = 0;
+
+  printf("%s: selfie terminating %lu-bit RISC-U binary %s with exit code %ld\n", selfie_name,
+    WORDSIZEINBITS,
+    get_name(current_context),
+    sign_extend(exit_code, SYSCALL_BITWIDTH));
+
+  if (machine != HYPSTER)
+    print_profile(current_context);
+  else if (GC_ON) {
+    printf("%s: --------------------------------------------------------------------------------\n", selfie_name);
+    print_gc_profile(current_context);
+  }
+
+  run = 0;
 
   return exit_code;
-
-
-
-    return 0;
 }
 
 uint64_t selfie_run(uint64_t machine) {
@@ -13410,7 +13493,7 @@ uint64_t selfie(uint64_t extras) {
         if (string_compare(argument, "-m"))
           return selfie_run(MIPSTER);
         else if (string_compare(argument, "-x")) // Assignment 3 - Processes - Michael Lenort 
-          return selfie_run_mipsterOS(MIPSTER, get_argument());  // used to call the function when flags are passed
+          return selfie_run_mipsterOS(MIPSTER);  // used to call the function when flags are passed
         // else if(string_compare(argument, "-z"))
         //   return selfie_run_hypsterOS(HYPSTER);
         else if (string_compare(argument, "-d"))
