@@ -12950,8 +12950,10 @@ uint64_t mipster(uint64_t* to_context) {
       return get_exit_code(from_context);
     else {
       // TODO: scheduler should go here
-      to_context = from_context;
+      to_context = get_next_context(to_context);
 
+      if (to_context == (uint64_t*) 0)
+        to_context = current_context;
       timeout = TIMESLICE;
     }
   }
@@ -12970,7 +12972,10 @@ uint64_t hypster(uint64_t* to_context) {
       return get_exit_code(from_context);
     else
       // TODO: scheduler should go here
-      to_context = from_context;
+       to_context = get_next_context(to_context);
+
+      if (to_context == (uint64_t*) 0)
+        to_context = current_context;
   }
 }
 
