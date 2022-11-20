@@ -547,6 +547,7 @@ uint64_t get_instruction();
 // inherit things. 
 
 
+
 uint64_t read_literal_value();
 
 uint64_t get_register();
@@ -2521,6 +2522,9 @@ uint64_t handle_exception(uint64_t* context);
 uint64_t mipster(uint64_t* to_context);
 uint64_t hypster(uint64_t* to_context);
 
+void processes_amount(uint64_t* context, uint64_t processes);
+
+
 uint64_t mixter(uint64_t* to_context, uint64_t mix);
 
 uint64_t minmob(uint64_t* to_context);
@@ -2580,6 +2584,10 @@ uint64_t MINSTER = 5;
 uint64_t MOBSTER = 6;
 
 uint64_t CAPSTER = 7;
+
+uint64_t MIPSTER_PROC = 8;
+
+uint64_t HYPSTER_PROC = 9;
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -13159,6 +13167,26 @@ void boot_loader(uint64_t* context) {
   up_load_arguments(context, number_of_remaining_arguments(), remaining_arguments());
 }
 
+
+
+void processes_amount(uint64_t* context, uint64_t num_processes) {
+  uint64_t* new_context;
+  uint64_t i;
+
+  while (num_processes > 1) {
+    new_context = create_context(MY_CONTEXT, 0);
+    set_next_context(context, new_context);
+    context = new_context;
+    boot_loader(context);
+    num_processes = num_processes - 1;
+    printf("%lu", i);
+    i = i + 1;
+
+  }
+
+  set_next_context(context, current_context);
+}
+
 // Assignment 3 - Processes - Michael Lenort
 // similiar to selfie_run i could try to parse down the amount of processes after the -x flag
 // the argument should be in get_argument and then its probably useful to somehow use a while loop
@@ -13168,6 +13196,8 @@ uint64_t selfie_run_mipsterOS(uint64_t machine){
 
     uint64_t exit_code;
     uint64_t processes;
+    uint64_t* context;
+    uint64_t* new_context;
     printf("%lu", machine);
 
     printf("you called the famous mipsterOS flag");
@@ -13228,14 +13258,29 @@ uint64_t selfie_run_mipsterOS(uint64_t machine){
   // works as well, loops trough the amount of integer value we set after the x flag
   // now we need to create somehow a new context for each new iteration. 
    while(processes > 1){
-
-    printf("HELLO WORLD");
-    current_context = create_context(MY_CONTEXT, 0);
-    boot_loader(current_context);
     
+    printf("HELLO WORLD");
+
+    // new_context = create_context(MY_CONTEXT, 0);
+    // set_next_context(current_context, new_context);
+    // boot_loader(current_context);
+    
+    // processes = processes - 1;
+
+
+
+    new_context = create_context(MY_CONTEXT, 0);
+    set_next_context(context, new_context);
+    context = new_context;
+    boot_loader(context);
     processes = processes - 1;
+  
+
     
   }
+
+
+  set_next_context(context, current_context);
 
 
   // current_context is ready to run
@@ -13296,6 +13341,10 @@ uint64_t selfie_run_mipsterOS(uint64_t machine){
 
 uint64_t selfie_run(uint64_t machine) {
   uint64_t exit_code;
+  uint64_t amount;
+
+
+
 
   if (code_size == 0) {
     printf("%s: nothing to run, debug, or host\n", selfie_name);
@@ -13321,7 +13370,12 @@ uint64_t selfie_run(uint64_t machine) {
   reset_profiler();
   reset_microkernel();
 
-  init_memory(atoi(peek_argument(0)));
+
+  amount = atoi(peek_argument(0));
+
+
+
+  init_memory(amount);
 
   current_context = create_context(MY_CONTEXT, 0);
 
@@ -13368,6 +13422,15 @@ uint64_t selfie_run(uint64_t machine) {
     exit_code = mobster(current_context);
   else if (machine == HYPSTER)
     exit_code = hypster(current_context);
+  else if(machine == HYPSTER_PROC){
+    processes_amount(current_context, amount);
+    exit_code = hypster(current_context);
+  }
+  else if(machine == MIPSTER_PROC){
+    processes_amount(current_context, amount);
+    exit_code = mipster(current_context);
+
+  }
   else
     // change 0 to anywhere between 0% to 100% mipster
     exit_code = mixter(current_context, 0);
@@ -13495,10 +13558,14 @@ uint64_t selfie(uint64_t extras) {
       else if (extras == 0) {
         if (string_compare(argument, "-m"))
           return selfie_run(MIPSTER);
-        else if (string_compare(argument, "-x")) // Assignment 3 - Processes - Michael Lenort 
-          return selfie_run_mipsterOS(MIPSTER);  // used to call the function when flags are passed
+        // else if (string_compare(argument, "-x")) // Assignment 3 - Processes - Michael Lenort 
+        //   return selfie_run(MIPSTER_PROC);  // used to call the function when flags are passed
         // else if(string_compare(argument, "-z"))
         //   return selfie_run_hypsterOS(HYPSTER);
+        else if (string_compare(argument, "-x"))
+          return selfie_run(MIPSTER_PROC);
+        else if (string_compare(argument, "-z"))
+          return selfie_run(HYPSTER_PROC);
         else if (string_compare(argument, "-d"))
           return selfie_run(DIPSTER);
         else if (string_compare(argument, "-r"))
