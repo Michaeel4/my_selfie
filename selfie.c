@@ -1432,6 +1432,10 @@ void set_return_value_of_fork(uint64_t *forked_context,uint64_t *original_contex
 
 void copy_memory(uint64_t *forked_context,uint64_t *original_context);
 
+uint64_t check_exit(uint64_t* context);
+uint64_t STATUS_READY   = 0;
+uint64_t STATUS_BLOCK   = 1;
+uint64_t STATUS_ZOMBIE  = 2;
 
 
 void emit_open();
@@ -14142,6 +14146,28 @@ void up_load_arguments(uint64_t *context, uint64_t argc, uint64_t *argv)
   // initialize frame pointer register for completeness (redundant)
   *(get_regs(context) + REG_S0) = 0;
 }
+uint64_t check_exit(uint64_t* context) {
+  uint64_t exit_code;
+
+  if (get_process_parent(context) == MY_CONTEXT) {
+    used_contexts = (uint64_t*) 0;
+    return EXIT;
+  }
+
+  if (get_process_state(get_process_parent(context)) == STATUS_BLOCK) {
+    set_process_state(get_process_parent(context), STATUS_READY);
+  } else {
+    set_process_state(context, STATUS_ZOMBIE);
+  }
+
+  exit_code = sign_shrink(get_exit_code(context), 8);
+  exit_code = left_shift(exit_code, 8);
+  if (is_virtual_address_valid(*(get_regs(get_process_parent(context)) + REG_A0), WORDSIZE))
+    map_and_store(get_process_parent(context), *(get_regs(get_process_parent(context)) + REG_A0), exit_code);
+
+  return DONOTEXIT;
+}
+
 
 uint64_t handle_system_call(uint64_t *context)
 {
@@ -14172,9 +14198,10 @@ uint64_t handle_system_call(uint64_t *context)
   
   {
     implement_exit(context);
+    return check_exit(context);
+
 
     // TODO: exit only if all contexts have exited
-    return EXIT;
   }
   else
   {
