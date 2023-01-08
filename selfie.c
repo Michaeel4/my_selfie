@@ -293,6 +293,14 @@ uint64_t output_fd   = 1; // 1 is file descriptor of standard output
 char*    output_buffer = (char*) 0;
 uint64_t output_cursor = 0; // cursor for output buffer
 
+
+uint64_t old_pid = 1; //pid_for_child_process
+uint64_t type_of_machine_tested = 0;
+uint64_t machine_hypster = 0;
+
+uint64_t machine_global_type = 0;
+
+
 // ------------------------- INITIALIZATION ------------------------
 
 void init_library() {
@@ -1415,6 +1423,12 @@ void implement_read(uint64_t* context);
 void emit_write();
 void implement_write(uint64_t* context);
 
+void emit_fork();
+void implement_fork(uint64_t* context);
+
+void emit_wait();
+void implement_wait(uint64_t* context);
+
 void     emit_open();
 uint64_t down_load_string(uint64_t* context, uint64_t vstring, char* s);
 void     implement_openat(uint64_t* context);
@@ -1437,6 +1451,8 @@ uint64_t SYSCALL_READ   = 63;
 uint64_t SYSCALL_WRITE  = 64;
 uint64_t SYSCALL_OPENAT = 56;
 uint64_t SYSCALL_BRK    = 214;
+uint64_t SYSCALL_FORK = 231;
+uint64_t SYSCALL_WAIT = 232;
 
 /* DIRFD_AT_FDCWD corresponds to AT_FDCWD in fcntl.h and
    is passed as first argument of the openat system call
@@ -2356,7 +2372,7 @@ uint64_t* delete_context(uint64_t* context, uint64_t* from);
 
 // number of entries of a machine context: 9 uint64_t plus 16 uint64_t* entries
 // extended in the symbolic execution engine and the Boehm garbage collector
-uint64_t CONTEXTENTRIES = 25;
+uint64_t CONTEXTENTRIES = 29;
 
 uint64_t* allocate_context(); // declaration avoids warning in the Boehm garbage collector
 
@@ -2391,6 +2407,11 @@ uint64_t used_list_head(uint64_t* context)   { return (uint64_t) (context + 21);
 uint64_t free_list_head(uint64_t* context)   { return (uint64_t) (context + 22); }
 uint64_t gcs_in_period(uint64_t* context)    { return (uint64_t) (context + 23); }
 uint64_t use_gc_kernel(uint64_t* context)    { return (uint64_t) (context + 24); }
+uint64_t pid_status(uint64_t* context)       { return (uint64_t) (context + 25); }
+uint64_t child_status(uint64_t* context)     { return (uint64_t) (context + 26); }
+uint64_t pid(uint64_t* context)              { return (uint64_t) (context + 27); }
+uint64_t parent_fork(uint64_t* context)      { return (uint64_t) (context + 28); }
+
 
 uint64_t* get_next_context(uint64_t* context)    { return (uint64_t*) *context; }
 uint64_t* get_prev_context(uint64_t* context)    { return (uint64_t*) *(context + 1); }
@@ -2418,6 +2439,11 @@ uint64_t* get_used_list_head(uint64_t* context)   { return (uint64_t*) *(context
 uint64_t* get_free_list_head(uint64_t* context)   { return (uint64_t*) *(context + 22); }
 uint64_t  get_gcs_in_period(uint64_t* context)    { return             *(context + 23); }
 uint64_t  get_use_gc_kernel(uint64_t* context)    { return             *(context + 24); }
+uint64_t  get_pid_status(uint64_t* context)       { return             *(context + 25); }
+uint64_t  get_child_status(uint64_t* context)     { return             *(context + 26); }
+uint64_t  get_pid(uint64_t* context)              { return             *(context + 27); }
+uint64_t* get_parent_fork(uint64_t* context)      { return (uint64_t*) *(context + 28); }
+
 
 void set_next_context(uint64_t* context, uint64_t* next)      { *context        = (uint64_t) next; }
 void set_prev_context(uint64_t* context, uint64_t* prev)      { *(context + 1)  = (uint64_t) prev; }
@@ -2445,6 +2471,11 @@ void set_used_list_head(uint64_t* context, uint64_t* used_list_head) { *(context
 void set_free_list_head(uint64_t* context, uint64_t* free_list_head) { *(context + 22) = (uint64_t) free_list_head; }
 void set_gcs_in_period(uint64_t* context, uint64_t gcs)              { *(context + 23) = gcs; }
 void set_use_gc_kernel(uint64_t* context, uint64_t use)              { *(context + 24) = use; }
+void set_pid_status(uint64_t* context, uint64_t pid_code)            { *(context + 25) = pid_code;}
+void set_child_status(uint64_t* context, uint64_t status)            { *(context + 26) = status;}
+void set_pid(uint64_t* context, uint64_t pid)                        { *(context + 27) = pid;}
+void set_parent_fork(uint64_t* context, uint64_t* parent)            { *(context + 28) = (uint64_t) parent;}
+
 
 // -----------------------------------------------------------------
 // -------------------------- MICROKERNEL --------------------------
@@ -7274,6 +7305,8 @@ void selfie_compile() {
   emit_read();
   emit_write();
   emit_open();
+  emit_fork();
+  emit_wait();
 
   emit_malloc();
 
@@ -8493,6 +8526,7 @@ void implement_exit(uint64_t* context) {
     print_register_hexadecimal(REG_A0);
     printf(" |- ->\n");
   }
+  set_child_status(get_parent(context), get_pid_status(context));
 
   signed_int_exit_code = *(get_regs(context) + REG_A0);
 
@@ -8750,6 +8784,113 @@ void implement_write(uint64_t* context) {
     println();
   }
 }
+
+
+
+
+void implement_fork(uint64_t * parent)
+{
+  
+  uint64_t* context;
+  uint64_t lo;
+  uint64_t hi;
+  uint64_t frame;
+  uint64_t* parent_table;
+  context = create_context(MY_CONTEXT, 0);
+  
+  lo = 0;
+  hi = 32;
+  
+  while (lo < hi)
+  {
+    *(get_regs(context) + lo) = *(get_regs(parent) + lo);
+    lo = lo + 1;
+  }
+
+  
+  set_parent_fork(context,parent);
+  
+  set_name(context, (char*) old_pid);
+  
+  
+  set_code_seg_start(context, get_code_seg_start(parent));
+  set_code_seg_size(context, get_code_seg_size(parent));
+  set_program_break(context, get_program_break(parent));
+
+  set_data_seg_start(context, get_data_seg_start(parent));
+  set_data_seg_size(context, get_data_seg_size(parent));
+  
+  
+  set_heap_seg_start(context,  get_heap_seg_start(parent));
+  
+  parent_table = get_pt(parent);
+
+  lo = get_code_seg_start(parent);
+  hi = get_program_break(parent);
+  while (lo < hi){
+    if (is_virtual_address_mapped(parent_table, lo))
+    {
+      frame = load_virtual_memory(parent_table, lo);
+      map_and_store(context, lo, frame);
+    }
+    
+    lo = lo + WORDSIZE;
+  }
+
+  lo = *(get_regs(context) + REG_SP);
+  hi = HIGHESTVIRTUALADDRESS;
+  while (lo <= hi)
+  {
+    if (is_virtual_address_mapped(parent_table, lo))
+    {
+      frame = load_virtual_memory(parent_table, lo);
+      map_and_store(context, lo, frame);
+    }   
+    lo = lo + WORDSIZE;
+  }
+
+  
+  
+  *(get_regs(parent) + REG_A0) = old_pid;
+  *(get_regs(context) + REG_A0) = 0;
+  set_pc(parent,get_pc(parent) + INSTRUCTIONSIZE);
+  set_pc(context,get_pc(parent));
+  set_pid(context, old_pid);
+  old_pid = old_pid + 1;
+
+}
+
+void implement_wait(uint64_t * context)
+{
+  pc = pc + INSTRUCTIONSIZE;
+  *(get_regs(context)+REG_A0) = 0;
+  
+}
+
+void emit_fork() {
+  create_symbol_table_entry(LIBRARY_TABLE, "fork", 0, PROCEDURE, UINT64_T, 0, code_size);
+
+  //Don't know why but it asks for A1 and A2
+  emit_addi(REG_A7, REG_ZR, SYSCALL_FORK);
+
+  emit_ecall();
+
+  emit_jalr(REG_ZR, REG_RA, 0);
+
+}
+
+void emit_wait() {
+  create_symbol_table_entry(LIBRARY_TABLE, "wait", 0, PROCEDURE, UINT64_T, 1, code_size);
+  emit_load(REG_A0, REG_SP, 0); // return
+  emit_addi(REG_SP, REG_SP, WORDSIZE);
+
+  emit_addi(REG_A7, REG_ZR, SYSCALL_WAIT);
+
+  emit_ecall();
+
+  emit_jalr(REG_ZR, REG_RA, 0);
+}
+
 
 void emit_open() {
   create_symbol_table_entry(LIBRARY_TABLE, "open", 0, PROCEDURE, UINT64_T, 3, code_size);
@@ -10982,8 +11123,11 @@ void do_ecall() {
     }
   else {
     read_register(REG_A0);
+     if (*(registers + REG_A7) == SYSCALL_FORK) {
 
-    if (*(registers + REG_A7) != SYSCALL_EXIT) {
+    }
+
+    else if (*(registers + REG_A7) != SYSCALL_EXIT) {
       if (*(registers + REG_A7) != SYSCALL_BRK) {
         read_register(REG_A1);
         read_register(REG_A2);
@@ -12290,6 +12434,8 @@ void init_context(uint64_t* context, uint64_t* parent, uint64_t* vctxt) {
   set_free_list_head(context, (uint64_t*) 0);
   set_gcs_in_period(context, 0);
   set_use_gc_kernel(context, GC_DISABLED);
+  set_child_status(context, 0);
+  set_pid_status(context, 0);
 }
 
 uint64_t* find_context(uint64_t* parent, uint64_t* vctxt) {
@@ -12846,6 +12992,12 @@ uint64_t handle_system_call(uint64_t* context) {
 
     // TODO: exit only if all contexts have exited
     return EXIT;
+  } else if (a7 == SYSCALL_FORK) {
+    implement_fork(context);
+  }
+  else if (a7 == SYSCALL_WAIT){
+    implement_wait(context);
+  
   } else {
     printf("%s: unknown system call %lu\n", selfie_name, a7);
 
@@ -12932,50 +13084,93 @@ uint64_t handle_exception(uint64_t* context) {
 uint64_t mipster(uint64_t* to_context) {
   uint64_t timeout;
   uint64_t* from_context;
-
+  uint64_t exit_code;
   printf("mipster\n");
   printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
 
   timeout = TIMESLICE;
 
+
+
   while (1) {
     from_context = mipster_switch(to_context, timeout);
-
-    if (get_parent(from_context) != MY_CONTEXT) {
-      // switch to parent which is in charge of handling exceptions
-      to_context = get_parent(from_context);
-
-      timeout = TIMEROFF;
-    } else if (handle_exception(from_context) == EXIT)
-      return get_exit_code(from_context);
+    
+    if (handle_exception(from_context) == EXIT){
+      exit_code = get_exit_code(from_context);
+          
+      if (get_parent_fork(from_context))
+      {
+        set_child_status(get_parent_fork(from_context), exit_code);
+        set_pid_status(get_parent_fork(from_context), get_pid(from_context));
+      }
+      
+      used_contexts = delete_context(from_context, used_contexts);
+      to_context = used_contexts;
+      if (used_contexts == (uint64_t*) 0)
+      {
+        return exit_code;
+      }
+    }
+    else if (type_of_machine_tested == HYPSTER)
+    {
+      if (get_next_context(from_context))
+      {
+        to_context = get_next_context(from_context);
+      }
+      else
+      {
+        to_context = from_context;
+      }   
+    }
     else {
-      // TODO: scheduler should go here
-      to_context = get_next_context(to_context);
-
-      if (to_context == (uint64_t*) 0)
-        to_context = current_context;
-      timeout = TIMESLICE;
+      if (get_next_context(from_context))
+      {
+        to_context = get_next_context(from_context);
+      }
+      else
+      {
+        to_context = used_contexts;
+      }    
     }
   }
 }
 
 uint64_t hypster(uint64_t* to_context) {
   uint64_t* from_context;
-
+  uint64_t exit_code;
   printf("hypster\n");
   printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
 
   while (1) {
     from_context = hypster_switch(to_context, TIMESLICE);
-
     if (handle_exception(from_context) == EXIT)
-      return get_exit_code(from_context);
+    {
+     
+      exit_code = get_exit_code(from_context);
+      if (get_parent_fork(from_context))
+      {
+        set_child_status(get_parent_fork(from_context), exit_code);
+        set_pid_status(get_parent_fork(from_context), get_pid(from_context));
+      }
+      used_contexts = delete_context(from_context, used_contexts);
+      to_context = used_contexts;
+      if (used_contexts == (uint64_t*) 0)
+      {
+        return exit_code;
+      }
+      
+    }
     else
-      // TODO: scheduler should go here
-       to_context = get_next_context(to_context);
-
-      if (to_context == (uint64_t*) 0)
-        to_context = current_context;
+    {
+      if (get_next_context(from_context))
+      {
+        to_context = get_next_context(from_context);
+      }
+      else
+      {
+        to_context = used_contexts;
+      }   
+    }
   }
 }
 
@@ -13522,6 +13717,7 @@ void print_synopsis(char* extras) {
 
 uint64_t selfie(uint64_t extras) {
   printf("%s: This is Michael Lenort's Selfie!\n", selfie_name);
+
   if (number_of_remaining_arguments() == 0)
     return EXITCODE_NOARGUMENTS;
   else {
@@ -13539,6 +13735,18 @@ uint64_t selfie(uint64_t extras) {
     init_interpreter();
 
     init_disassembler();
+
+    //Detect if this is a mipster machine running hypster code
+    // while(peek_argument(counter))
+    // {
+    //   argument = peek_argument(counter);
+    //   if (string_compare(argument, "-y"))
+    //   {
+    //     type_of_machine_tested = HYPSTER;
+    //   }
+    //   counter = counter + 1;
+    // }
+    
 
     while (number_of_remaining_arguments() > 0) {
       get_argument();
