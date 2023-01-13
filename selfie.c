@@ -9437,8 +9437,70 @@ void emit_lock() {
 
 void implement_lock(uint64_t* context) {
 
+
+  //printf("%lu", get_process_state(context));
+
+  // Assignment 6 - Only when the process is ready we can add a lock to it.
+
+
+  if (debug_syscalls) {
+    print("(lock): ");
+    print_register_hexadecimal(REG_A0);
+    print(" |- ");
+    print_register_hexadecimal(REG_A0);
+  }
+
+  set_next_locked_context(context, locked_contexts);
+  set_prev_locked_context(context, (uint64_t*) 0);
+  set_lock_state(context, LOCK_ACQUIRE);
+
+  if (locked_contexts != (uint64_t*) 0) {
+    set_prev_locked_context(locked_contexts, context);
+    set_lock_state(context, LOCKED);
+  }
+
+  locked_contexts = context;
+
+  if (debug_syscalls) {
+    print(" -> ");
+    print_register_hexadecimal(REG_A0);
+    println();
+  }
+  
+  set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
+
+
+
+
+  // if(get_process_state(context) == STATUS_READY)
+  //   set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
+}
+
+void implement_unlock(uint64_t* context) {
+  if (debug_syscalls) {
+    print("(unlock): ");
+    print_register_hexadecimal(REG_A0);
+    print(" |- ");
+    print_register_hexadecimal(REG_A0);
+  }
+
+  // print warning if unlock() occures without previous lock()
+  if (locked_contexts == (uint64_t*) 0) {
+    print_line_number("warning", line_number);
+    print("unlock found, without previous lock\n");
+  }
+
+  locked_contexts = delete_locked_context(context, locked_contexts);
+
+  if (debug_syscalls) {
+    print(" -> ");
+    print_register_hexadecimal(REG_A0);
+    println();
+  }
+
   set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
 }
+
 
 void emit_unlock() {
   create_symbol_table_entry(LIBRARY_TABLE, "unlock", 0, PROCEDURE, UINT64_T, 0, code_size);
@@ -9450,11 +9512,6 @@ void emit_unlock() {
   emit_jalr(REG_ZR, REG_RA, 0);
 }
 
-void implement_unlock(uint64_t* context) {
- 
-
-  set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
-}
 void emit_wait() {
     create_symbol_table_entry(LIBRARY_TABLE, "wait", 0, PROCEDURE, UINT64_T, 1, code_size);
 
@@ -14374,7 +14431,11 @@ uint64_t handle_system_call(uint64_t* context) {
   else if (a7 == SYSCALL_UNLOCK)
     implement_unlock(context);
   else if (a7 == SYSCALL_EXIT) {
+
+    implement_unlock(context);
     implement_exit(context);
+
+    
     return check_exit(context);
 
   } else {
@@ -14473,66 +14534,98 @@ uint64_t handle_exception(uint64_t *context)
   }
 }
 
-uint64_t mipster(uint64_t *to_context) {
-    uint64_t timeout;
-    uint64_t *from_context;
+uint64_t mipster(uint64_t* to_context) {
+  uint64_t timeout;
+  uint64_t* from_context;
+  uint64_t is_found;
+  uint64_t found_lock_acquired;
 
-    printf("mipster\n");
-    printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
+  print("mipster\n");
+  printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
 
-    timeout = TIMESLICE;
+  timeout = TIMESLICE;
 
+  while (1) {
+    from_context = mipster_switch(to_context, timeout);
+    
+    if (get_parent(from_context) != MY_CONTEXT) {
+      // switch to parent which is in charge of handling exceptions
+      to_context = get_parent(from_context);
 
+      timeout = TIMEROFF;
+    } else if (handle_exception(from_context) == EXIT) {
+      return get_exit_code(from_context);
+		
+    } else {
+      if (get_next_context(from_context) != (uint64_t*) 0) {
+        if (locked_contexts != (uint64_t*) 0) {
+          to_context = locked_contexts;
+          found_lock_acquired = 0;
 
-    while (1) {
-        from_context = mipster_switch(to_context, timeout);
+          while(found_lock_acquired == 0) {
+            if (get_lock_state(to_context) == LOCK_ACQUIRE)
+              found_lock_acquired = 1;
+            else
+              to_context = get_next_locked_context(to_context);
+          }
+        } else
+          to_context = get_next_context(from_context);
 
-        if (get_parent(from_context) != MY_CONTEXT) {
-            // switch to parent which is in charge of handling exceptions
-            to_context = get_parent(from_context);
+      } else {
+        is_found = 0;
+        to_context = used_contexts;
 
-            timeout = TIMEROFF;
-        } else if (handle_exception(from_context) == EXIT)
-            return get_exit_code(from_context);
-        else {
-            // TODO: scheduler should go here
-
-            to_context = get_next_context(from_context);
-
-            
-
-            if(to_context == (uint64_t*) 0)
-                to_context = used_contexts;
-
-            while (get_parent(to_context) != MY_CONTEXT)
-                to_context = get_parent(to_context);
-
-            timeout = TIMESLICE;
+        while (is_found == 0) {
+          if (get_process_state(to_context) == STATUS_READY) {
+            if (get_virtual_context(to_context) == (uint64_t*) 0) {
+              is_found = 1;
+						
+            } else
+              to_context = get_next_context(to_context);
+          } else
+            to_context = get_next_context(to_context);
         }
+      }
+			
+      timeout = TIMESLICE;
     }
+  }
 }
 
-uint64_t hypster(uint64_t *to_context) {
-    uint64_t *from_context;
+uint64_t hypster(uint64_t* to_context) {
+  uint64_t* from_context;
+  uint64_t found_lock_acquired;
 
-    printf("hypster\n");
-    printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
+  print("hypster\n");
+  printf("%s: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", selfie_name);
 
-    while (1) {
-        from_context = hypster_switch(to_context, TIMESLICE);
+  while (1) {
+    
+    from_context = hypster_switch(to_context, TIMESLICE);
 
-        if (handle_exception(from_context) == EXIT)
-            return get_exit_code(from_context);
-        else {
-            // TODO: scheduler should go here
-            to_context = get_next_context(from_context);
+    if (handle_exception(from_context) == EXIT)
+      return get_exit_code(from_context);
+    else {
+      if (get_next_context(from_context) != (uint64_t*) 0) {
+        if (locked_contexts != (uint64_t*) 0) {
+          to_context = locked_contexts;
+          found_lock_acquired = 0;
 
-            if (to_context == (uint64_t *) 0)
-                to_context = used_contexts;
-        }
+          while(found_lock_acquired == 0) {
+            if (get_lock_state(to_context) == LOCK_ACQUIRE)
+              found_lock_acquired = 1;
+            else
+              to_context = get_next_locked_context(to_context);
+          }
+        } else 
+          to_context = get_next_context(from_context);
+      } else {
+        to_context = used_contexts;  
+      }
+
     }
+  }
 }
-
 
 uint64_t mixter(uint64_t *to_context, uint64_t mix)
 {
