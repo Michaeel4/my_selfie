@@ -2393,7 +2393,7 @@ uint64_t* delete_locked_context(uint64_t* context, uint64_t* from);
 uint64_t* delete_children(uint64_t* context, uint64_t* from);
 
 
-uint64_t is_lock_granted(uint64_t* context, uint64_t* from);
+uint64_t is_locked(uint64_t* context, uint64_t* from);
 
 // Process id
 uint64_t pid = 1;
@@ -13771,7 +13771,7 @@ uint64_t* delete_locked_context(uint64_t* context, uint64_t* from) {
   return from;
 }
 
-uint64_t is_lock_granted(uint64_t* context, uint64_t* from) {
+uint64_t is_locked(uint64_t* context, uint64_t* from) {
   uint64_t is_found;
   uint64_t* locked_context;
 
