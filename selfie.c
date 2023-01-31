@@ -1427,6 +1427,18 @@ uint64_t get_exit_code_wait(uint64_t *context);
 void handle_wstatus(uint64_t *context,uint64_t *child_context,uint64_t wstatus, uint64_t exit_code);
 
 
+// Assignment 7 - threads
+
+void emit_pthread_create();
+void implement_pthread_create(uint64_t* context);
+
+void emit_pthread_join();
+void implement_pthread_join(uint64_t* context);
+
+void emit_pthread_exit();
+void implement_pthread_exit(uint64_t* context);
+
+
 // Assignment 6 - Lock/Unlock
 
 void emit_lock();
@@ -1437,6 +1449,9 @@ void implement_unlock(uint64_t* context);
 
 
 void copy_context(uint64_t *forked_context,uint64_t *original_context);
+
+void copy_page_frame(uint64_t* original_context, uint64_t* copied_context, uint64_t page);
+
 
 void copy_regs(uint64_t *forked_context,uint64_t *original_context);
 
@@ -1482,6 +1497,10 @@ uint64_t SYSCALL_WAIT   = 226;
 // Assignment 6 - Lock/Unlock 
 uint64_t SYSCALL_LOCK = 227;
 uint64_t SYSCALL_UNLOCK = 228;
+
+uint64_t SYSCALL_PTHREAD_CREATE = 229;
+uint64_t SYSCALL_PTHREAD_JOIN   = 230;
+uint64_t SYSCALL_PTHREAD_EXIT   = 231;
 
 /* DIRFD_AT_FDCWD corresponds to AT_FDCWD in fcntl.h and
    is passed as first argument of the openat system call
@@ -2392,7 +2411,9 @@ uint64_t* delete_locked_context(uint64_t* context, uint64_t* from);
 
 uint64_t* delete_children(uint64_t* context, uint64_t* from);
 
-
+uint64_t* remove_context(uint64_t* context, uint64_t* from);
+uint64_t* add_context(uint64_t* context, uint64_t* from);
+uint64_t* copy_context1(uint64_t* original);
 uint64_t is_locked(uint64_t* context, uint64_t* from);
 
 // Process id
@@ -2593,6 +2614,8 @@ uint64_t *current_context = (uint64_t *)0; // context currently running
 uint64_t *used_contexts = (uint64_t *)0; // doubly-linked list of used contexts
 uint64_t *free_contexts = (uint64_t *)0; // singly-linked list of free contexts
 uint64_t *locked_contexts = (uint64_t*) 0; // doubly-linked list of locked contexts
+uint64_t* zombie_contexts = (uint64_t*) 0; // doubly-linked list of zombie contexts
+
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -7912,8 +7935,15 @@ void selfie_compile()
   emit_fork();
   emit_wait();
   emit_lock();
-  emit_unlock();
 
+
+
+  emit_lock();
+
+  emit_unlock();
+  emit_pthread_create();
+  emit_pthread_join();
+  emit_pthread_exit();
 
   if (GC_ON)
   {
@@ -9425,6 +9455,140 @@ void emit_fork() {
 
     emit_jalr(REG_ZR, REG_RA, 0);
 }
+
+
+void emit_pthread_create() {
+  create_symbol_table_entry(LIBRARY_TABLE, "pthread_create", 0, PROCEDURE, UINT64_T, 0, code_size);
+
+  emit_addi(REG_A7, REG_ZR, SYSCALL_PTHREAD_CREATE);
+  emit_ecall();
+
+  emit_jalr(REG_ZR, REG_RA, 0);
+}
+
+void implement_pthread_create(uint64_t* context) {
+  uint64_t* child_context;
+  uint64_t* child_top;
+  uint64_t vpaddr; //virtual page address
+  uint64_t vindex; //virtual index or offset 
+  uint64_t vcalc;
+
+  child_context = copy_context1(context);
+  
+  vindex = get_page_of_virtual_address(get_code_seg_start(context));
+  while (vindex < get_page_of_virtual_address(get_program_break(context)-8)+1) {
+    if (is_page_mapped(get_pt(context), vindex))
+      map_page(child_context, vindex, get_frame_for_page(get_pt(context), vindex));
+    vindex = vindex + 1;
+  }
+
+  vindex = get_page_of_virtual_address(*(get_regs(context) + REG_SP));
+  while (vindex < NUMBEROFPAGES) {
+    vpaddr = 0;
+    while (vpaddr < PAGESIZE) {
+      vcalc = vindex*PAGESIZE+vpaddr;
+      if (is_virtual_address_mapped(get_pt(context), vcalc)) {
+        map_and_store(child_context, vcalc, load_virtual_memory(get_pt(context), vcalc));
+      }
+      vpaddr = vpaddr + 8;
+    }
+    vindex = vindex + 1;
+  }
+
+  child_top = add_context(get_process_child(context), child_context);
+  set_process_child(context, child_top);
+  set_pid(child_context, pid);
+  set_process_parent(child_context, context);
+
+  *(get_regs(context) + REG_A0) = pid;
+  *(get_regs(child_context) + REG_A0) = 0;
+  set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
+  set_pc(child_context, get_pc(context));
+}
+
+void emit_pthread_join() {
+  create_symbol_table_entry(LIBRARY_TABLE, "pthread_join", 0, PROCEDURE, UINT64_T, 0, code_size);
+
+  emit_addi(REG_A7, REG_ZR, SYSCALL_PTHREAD_JOIN);
+  emit_ecall();
+
+  emit_jalr(REG_ZR, REG_RA, 0);
+}
+
+
+
+void implement_pthread_join(uint64_t* context) {
+  uint64_t* forked_index;
+  uint64_t* zombie;
+  uint64_t v;
+  v = 0;
+
+  zombie = (uint64_t*) 0;
+
+  set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
+  
+  if (is_data_stack_heap_address(context, *(get_regs(context)+REG_A0))) {
+    v = 1;
+  } else if (*(get_regs(context)+REG_A0) == 0) {
+    v = 2;
+  } else {
+    *(get_regs(context) + REG_A0) = -1; 
+  }
+  if (v > 0) {
+    if (get_process_child(context) != (uint64_t*) 0) {
+      forked_index = get_process_child(context);
+      while(forked_index != (uint64_t*) 0) {
+        if (get_process_state(get_process_parent(forked_index)) == STATUS_ZOMBIE) {
+          zombie = get_process_parent(forked_index);
+          set_process_state(zombie, STATUS_READY); 
+          forked_index = (uint64_t*) 0;
+        } else {
+          forked_index = get_next_locked_context(forked_index);
+        }
+      }
+      if (zombie == (uint64_t*) 0) {
+        set_process_state(context, STATUS_BLOCK);
+        locked_contexts = add_context(context, locked_contexts);      
+        used_contexts = remove_context(context, used_contexts);
+      } else {
+        zombie_contexts = remove_context(zombie, zombie_contexts);
+        if (v != 2) {
+          map_and_store(get_parent(zombie), *(get_regs(get_parent(zombie))+REG_A0), left_shift(get_exit_code(zombie), 8));
+        }
+        // REG_A0, when parent waits, return PID from child
+        *(get_regs(context) + REG_A0) = get_pid(zombie); 
+      }
+    } else {
+    *(get_regs(context) + REG_A0) = -1;  //context has no children  
+    }
+  }
+}
+
+void emit_pthread_exit() {
+  create_symbol_table_entry(LIBRARY_TABLE, "pthread_exit", 0, PROCEDURE, UINT64_T, 0, code_size);
+
+  emit_addi(REG_A7, REG_ZR, SYSCALL_PTHREAD_EXIT);
+  emit_ecall();
+
+  emit_jalr(REG_ZR, REG_RA, 0);
+}
+
+void implement_pthread_exit(uint64_t* context) {
+  uint64_t signed_int_exit_code;
+
+  if (debug_syscalls) {
+    print("(exit): ");
+    print_register_hexadecimal(REG_A0);
+    print(" |- ->\n");
+  }
+
+  signed_int_exit_code = *(get_regs(context) + REG_A0);
+
+  set_exit_code(context, sign_shrink(signed_int_exit_code, SYSCALL_BITWIDTH));
+
+  set_pc(context, get_pc(context) + INSTRUCTIONSIZE);
+}
+
 void emit_lock() {
   create_symbol_table_entry(LIBRARY_TABLE, "lock", 0, PROCEDURE, UINT64_T, 0, code_size);
 
@@ -9689,6 +9853,82 @@ void copy_regs(uint64_t *forked_context,uint64_t *original_context) {
         r = r + 1;
     }
 
+}
+void copy_page_frame(uint64_t* original_context, uint64_t* copied_context, uint64_t page) {
+  uint64_t count;
+  
+  count = 0;
+    
+  while(count < PAGESIZE) {
+    if (is_virtual_address_mapped(get_pt(original_context), page * PAGESIZE + count))
+	  map_and_store(copied_context, page * PAGESIZE + count, load_virtual_memory(get_pt(original_context), page * PAGESIZE + count));
+	
+    count = count + WORDSIZE;
+  }
+}
+uint64_t* remove_context(uint64_t* context, uint64_t* from) {
+  if (get_next_context(context) != (uint64_t*) 0)
+    set_prev_context(get_next_context(context), get_prev_context(context));
+
+  if (get_prev_context(context) != (uint64_t*) 0) {
+    set_next_context(get_prev_context(context), get_next_context(context));
+    set_prev_context(context, (uint64_t*) 0);
+  } else
+    from = get_next_context(context);
+
+  return from;
+}
+
+uint64_t* add_context(uint64_t* context, uint64_t* from) {
+  set_prev_context(context, (uint64_t*) 0);
+  set_next_context(context, from);
+
+  if (from != (uint64_t*) 0) {
+    set_prev_context(from, context);
+  }
+
+  return context;
+}
+uint64_t* copy_context1(uint64_t* original) {
+  uint64_t* context;
+  uint64_t r;
+
+  context = new_context();
+
+  set_regs(context, smalloc(NUMBEROFREGISTERS * WORDSIZE));
+
+  r = 0;
+
+  while (r < NUMBEROFREGISTERS) {
+    *(get_regs(context) + r) = *(get_regs(original) + r);
+
+    r = r + 1;
+  }
+
+  if (PAGETABLETREE == 0)
+    set_pt(context, zmalloc(NUMBEROFPAGES * SIZEOFUINT64STAR));
+  else
+    set_pt(context, zmalloc(NUMBEROFPAGES / NUMBEROFLEAFPTES * SIZEOFUINT64STAR));
+
+  set_lowest_lo_page(context, get_page_of_virtual_address(get_code_seg_start(original)));
+  set_highest_lo_page(context, get_page_of_virtual_address(get_program_break(original)));
+  set_lowest_hi_page(context, get_page_of_virtual_address(*(get_regs(context) + REG_SP)));
+  set_highest_hi_page(context, NUMBEROFPAGES);
+  set_code_seg_start(context, get_code_seg_start(original));
+  set_data_seg_start(context, get_data_seg_start(original));
+  set_heap_seg_start(context, get_heap_seg_start(original));
+  set_program_break(context, get_program_break(original));
+  set_exception(context, get_exception(original));
+  set_fault(context, get_fault(original));
+  set_exit_code(context, get_exit_code(original));
+  set_parent(context, get_parent(original));
+  set_virtual_context(context, get_virtual_context(original));
+  set_name(context, get_name(original));
+
+  set_code_seg_size(context, get_code_seg_size(original));
+  set_data_seg_size(context, get_data_seg_size(original));
+
+  return context;
 }
 
 void copy_context(uint64_t *forked_context,uint64_t *original_context) {
@@ -12231,6 +12471,16 @@ uint64_t is_syscall_lock_or_unlock() {
         return 0;
 }
 
+uint64_t is_syscall_thread_or_create() {
+    if (*(registers + REG_A7) != SYSCALL_PTHREAD_CREATE)
+        if (*(registers + REG_A7) != SYSCALL_PTHREAD_JOIN)
+            return 1;
+        else
+            return 0;
+    else
+        return 0;
+}
+
 uint64_t is_syscall_break_or_wait() {
     if (*(registers + REG_A7) != SYSCALL_BRK)
         if (*(registers + REG_A7) != SYSCALL_WAIT)
@@ -12286,11 +12536,14 @@ void do_ecall()
             if(is_syscall_break_or_wait()) {
 
               if(is_syscall_lock_or_unlock()){
+                if(is_syscall_thread_or_create()){
                 read_register(REG_A1);
                 read_register(REG_A2);
 
                 if (*(registers + REG_A7) == SYSCALL_OPENAT)
                     read_register(REG_A3);
+
+                }
               }
             }
 
@@ -14426,6 +14679,12 @@ uint64_t handle_system_call(uint64_t* context) {
     implement_fork(context);
   else if (a7 == SYSCALL_WAIT)
     implement_wait(context);
+  else if (a7 == SYSCALL_PTHREAD_CREATE)
+    implement_pthread_create(context);
+  else if (a7 == SYSCALL_PTHREAD_JOIN)
+    implement_pthread_join(context);
+  else if (a7 == SYSCALL_PTHREAD_EXIT)
+    implement_pthread_exit(context);
   else if (a7 == SYSCALL_LOCK)
     implement_lock(context);
   else if (a7 == SYSCALL_UNLOCK)
